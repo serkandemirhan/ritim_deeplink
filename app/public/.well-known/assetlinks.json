@@ -1,1 +1,13 @@
 
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ritimapp.mobile",
+      "sha256_cert_fingerprints": [
+        "AA:E3:17:80:4E:F6:21:61:F0:1C:82:96:70:E4:EF:A5:77:62:F8:F2:66:C1:1C:29:AD:8F:3D:17:44:B5:ED:62"
+      ]
+    }
+  }
+]
