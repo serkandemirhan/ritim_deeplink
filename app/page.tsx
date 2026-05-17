@@ -1,5 +1,6 @@
 export default function HomePage() {
-  const exampleUrl = 'https://YOUR-VERCEL-DOMAIN/t/NFC_TEST_001';
+  const domain = 'ritim-deeplink-ayr3t44in-serkan-demirhans-projects.vercel.app';
+  const exampleUrl = `https://${domain}/t/NFC_TEST_001`;
 
   return (
     <main className="page">
@@ -14,7 +15,7 @@ export default function HomePage() {
         <div className="grid">
           <div className="card">
             <div className="label">NFC card URL format</div>
-            <code className="code">https://YOUR-VERCEL-DOMAIN/t/&#123;tagCode&#125;</code>
+            <code className="code">https://{domain}/t/&#123;tagCode&#125;</code>
           </div>
           <div className="card">
             <div className="label">Example test URL</div>

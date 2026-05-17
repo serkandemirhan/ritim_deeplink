@@ -1,3 +1,5 @@
+import AutoOpenApp from './AutoOpenApp';
+
 type TagPageProps = {
   params: Promise<{ tagCode: string }>;
 };
@@ -17,6 +19,7 @@ export default async function TagPage({ params }: TagPageProps) {
           If the mobile app is installed and the domain association is verified,
           this link should open RitimApp automatically. This page is the web fallback.
         </p>
+        <AutoOpenApp appSchemeUrl={appSchemeUrl} />
 
         <div className="grid">
           <div className="card">

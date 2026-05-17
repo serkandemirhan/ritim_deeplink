@@ -137,3 +137,14 @@ p {
   font-size: 13px;
   font-weight: 700;
 }
+
+.auto-open-note {
+  display: inline-flex;
+  margin: 10px 0 0;
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: rgba(140, 92, 255, 0.14);
+  color: #dccfff;
+  font-size: 13px;
+  font-weight: 700;
+}
