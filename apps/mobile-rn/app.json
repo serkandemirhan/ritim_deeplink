@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Ritim Mobile",
+    "slug": "ritim-mobile",
+    "scheme": "ritimapp",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
+    "plugins": [
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "Ritim uses NFC to scan your registered fitness and wellness cards."
+        }
+      ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.ritimapp.mobile",
+      "associatedDomains": [
+        "applinks:ritim-deeplink.vercel.app"
+      ],
+      "infoPlist": {
+        "NFCReaderUsageDescription": "Ritim uses NFC to scan your registered fitness and wellness cards.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.ritimapp.mobile",
+      "backgroundColor": "#101840",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ritim-deeplink.vercel.app",
+              "pathPrefix": "/t"
+            },
+            {
+              "scheme": "https",
+              "host": "ritim-deeplink.vercel.app",
+              "pathPrefix": "/auth/callback"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "permissions": [
+        "android.permission.NFC"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "150b539b-eeb5-4811-9758-135083e8fb98"
+      }
+    },
+    "owner": "sdemirhan"
+  }
+}

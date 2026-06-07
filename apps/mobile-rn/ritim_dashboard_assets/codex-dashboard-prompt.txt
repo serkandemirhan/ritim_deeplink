@@ -1,0 +1,65 @@
+Codex prompt for Ritim Dashboard UI
+
+Build/update the Ritim mobile dashboard screen using the assets in this folder.
+
+Use:
+- dashboard-design-tokens.json for colors, gradients, spacing and radius.
+- ritim-icon-dark.svg in the header and NFC quick record card.
+- icon-pushup.svg, icon-walk.svg, icon-pullup.svg for priority goal cards.
+- icon-water.svg, icon-coffee.svg, icon-meditation.svg for wellness cards.
+- icon-scan.svg for the scan button and bottom navigation center item.
+- icon-home.svg, icon-progress.svg, icon-profile.svg for bottom navigation.
+
+Screen language must be Turkish.
+
+Layout:
+1. Header
+   - left: hamburger menu circular button
+   - center/left: Ritim logo + title “Bugün”
+   - subtitle: “Dokun. Kaydet. Geliş.”
+   - right: profile icon circular button
+
+2. Period selector
+   - segmented control: Gün / Hafta / Ay
+   - selected: Hafta
+   - selected tab uses brand gradient.
+
+3. Section: “Öncelikli hedefler”
+   - three horizontal cards:
+     - Şınav — 60/110 reps · %55 — +10
+     - Yürüyüş — 40/30 min · %100 — +10
+     - Pull-up — 10/15 reps · %67 — +5
+   - each card has icon box, title, subtitle, progress bar, point gain.
+
+4. Section: “Wellness”
+   - 3 compact cards in a horizontal row:
+     - Su — 500/2500 ml — %20
+     - Kahve — 1/3 cup — %33
+     - Meditasyon — 10/20 min — %50
+   - wellness cards use purple accent and subtle purple background.
+
+5. Water trend card
+   - title: “Su trendi”
+   - subtitle: “500/17500 ml · hedefin %3”
+   - chip: “7 gün”
+   - show 7 small vertical bottle bars with day labels: Cum, Cmt, Paz, Pzt, Sal, Çar, Per.
+   - only Per has value 500, the rest 0.
+
+6. NFC quick record card
+   - title: “NFC hızlı kayıt”
+   - subtitle: “Seçili aralıktaki NFC kayıtları.”
+   - stats: 2 NFC Kayıt, 500 ml Su
+   - right button: “Tara”
+   - use scan icon and brand gradient.
+
+7. Bottom navigation
+   - fixed at bottom
+   - items: Ana Sayfa, İlerleme, Tara, Profil
+   - Tara is large circular center action with gradient border/background.
+   - Ana Sayfa selected.
+
+Visual style:
+- Premium dark mobile app.
+- Rounded cards, thin borders, soft turquoise/purple glows.
+- Avoid too much neon green; use the Ritim turquoise-purple gradient for brand elements.
+- Keep scan CTA visible but balanced.

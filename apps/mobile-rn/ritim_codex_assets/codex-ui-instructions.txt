@@ -1,0 +1,39 @@
+RitimApp UI implementation notes for Codex
+
+Use the Ritim brand assets from this folder:
+- ritim-logo-full.svg for login/profile header if space allows
+- ritim-icon-light.svg for app icon preview or light background usage
+- ritim-icon-dark.svg for dark theme usage
+- ritim-design-tokens.json for exact colors and gradients
+
+General mobile UI style:
+- Dark premium fitness/health app.
+- Background: very dark navy with subtle turquoise and purple radial glows.
+- Cards: rounded 20-28px, dark navy surface, thin border.
+- Main CTA: turquoise → violet → purple gradient.
+- Use the Ritim logo icon in the header, not plain text only.
+- Remove the “Online sync ready” banner from login.
+- Text language: Turkish.
+
+Login screen:
+- Header: Ritim logo left, language selector TR right.
+- Title: Hoş Geldiniz
+- Subtitle: Dokun. Kaydet. Geliş.
+- Tabs: Giriş yap / Kayıt ol
+- Fields: E-posta veya kullanıcı adı, Şifre
+- Actions: Beni hatırla, Şifremi unuttum?
+- Primary button: Giriş yap
+- Secondary login options: Apple ile giriş yap, Google ile giriş yap, E-posta ile giriş bağlantısı gönder
+- Footer trust items: Güvenli, Kişisel ilerleme, Gizlilik
+
+Profile screen:
+- Header: menu icon + Profil
+- Profile card: Ritim icon, user name, email, account type
+- Info card: Durum, Hesap türü, Çalışma alanı, Yerel kayıtlar
+- Personal fields: Yaş, Boy (cm), Kilo (kg)
+- Gender chips: Kadın, Erkek, Diğer, Belirtmek istemiyorum
+- Activity level chips: Düşük, Orta, Yüksek
+- Goal chips: Form koru, Kas kazan, Yağ yak
+- Main button: Profili kaydet
+- Logout: red outline or red soft button
+- Home: secondary neutral button

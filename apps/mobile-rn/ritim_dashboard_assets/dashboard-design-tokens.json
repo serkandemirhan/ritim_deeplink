@@ -1,0 +1,39 @@
+{
+  "colors": {
+    "background": "#020A14",
+    "surface": "#0B1728",
+    "surfaceElevated": "#0F2035",
+    "border": "#24364F",
+    "borderActive": "#22E6D0",
+    "textPrimary": "#F8FAFC",
+    "textSecondary": "#AAB7C8",
+    "textMuted": "#6F7E91",
+    "turquoise": "#22E6D0",
+    "cyan": "#29C7F6",
+    "green": "#30E05A",
+    "purple": "#8A22F5",
+    "violet": "#5B5CF6",
+    "wellnessSurface": "#1B1740",
+    "danger": "#EF4444"
+  },
+  "gradients": {
+    "brand": "linear-gradient(90deg, #22E6D0 0%, #5B5CF6 52%, #8A22F5 100%)",
+    "backgroundGlow": "radial-gradient(circle at 20% 5%, rgba(34,230,208,0.16), transparent 32%), radial-gradient(circle at 75% 10%, rgba(138,34,245,0.16), transparent 35%), #020A14",
+    "activeTab": "linear-gradient(90deg, #22E6D0 0%, #5B5CF6 48%, #8A22F5 100%)",
+    "scanButton": "linear-gradient(135deg, #22E6D0 0%, #5B5CF6 45%, #8A22F5 100%)",
+    "wellnessCard": "linear-gradient(135deg, rgba(138,34,245,0.18), rgba(34,230,208,0.04))"
+  },
+  "radius": {
+    "screen": 36,
+    "card": 22,
+    "chip": 18,
+    "button": 20,
+    "iconBox": 16
+  },
+  "spacing": {
+    "screenPadding": 24,
+    "cardPadding": 18,
+    "sectionGap": 22,
+    "cardGap": 12
+  }
+}

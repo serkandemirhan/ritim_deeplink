@@ -1,0 +1,24 @@
+<svg width="720" height="220" viewBox="0 0 720 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ritimGradient" x1="40" y1="40" x2="300" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22E6D0"/>
+      <stop offset="0.52" stop-color="#5B5CF6"/>
+      <stop offset="1" stop-color="#8A22F5"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.13  0 0 0 0 0.90  0 0 0 0 0.82  0 0 0 0.45 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glow)">
+    <circle cx="38" cy="106" r="10" fill="#22E6D0"/>
+    <circle cx="68" cy="82" r="10" fill="#22E6D0"/>
+    <rect x="74" y="50" width="150" height="24" rx="12" fill="url(#ritimGradient)"/>
+    <rect x="50" y="94" width="178" height="24" rx="12" fill="url(#ritimGradient)"/>
+    <rect x="83" y="138" width="143" height="24" rx="12" fill="url(#ritimGradient)"/>
+    <path d="M194 34H270C326 34 360 68 360 112C360 150 337 178 299 189L348 196L316 172L360 220H296L245 160H222V220H166V34H194Z" fill="url(#ritimGradient)"/>
+    <path d="M196 128H246L262 76L286 154L304 118H348" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="410" y="146" font-family="Inter, Arial, sans-serif" font-size="92" font-weight="800" fill="#F8FAFC" letter-spacing="2">Ritim</text>
+</svg>
