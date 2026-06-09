@@ -8,7 +8,6 @@ import AppCard from '../../components/AppCard';
 import ActivityIcon from '../../components/ActivityIcon';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
-import { playSoundEffectSoon } from '../../services/soundEffects';
 import { RoutineCard } from '../routines/RoutineComponents';
 import { GoalSummaryCard, NFCResultCard, goalPercent } from '../../components/RitimFeedback';
 import { EnergyMeter } from '../../components/NfcSuccessExperience';
@@ -540,10 +539,6 @@ export default function HomeScreen({ route, navigate }) {
       Animated.delay(520),
       Animated.timing(celebrationAnim, { toValue: 0, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: true }),
     ]).start(() => setShowCelebration(false));
-    playSoundEffectSoon('momentum', 80);
-    if (activatedRawPercent >= 100) {
-      playSoundEffectSoon(activatedRawPercent >= 150 ? 'overdrive' : 'goalComplete', 180);
-    }
   }, [activatedExtra, activatedRawPercent, celebrationAnim, celebrationText, momentumAnim]);
 
   useEffect(() => {

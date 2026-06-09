@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ScrollView, Vibration, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ScrollView, Animated, Easing } from 'react-native';
 import AppScreen from '../../components/AppScreen';
 import AppButton from '../../components/AppButton';
 import AppCard from '../../components/AppCard';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
 import { isNativeNfcRuntime, scanRealNfcTag } from './nfcAdapter';
-import { playSoundEffect } from '../../services/soundEffects';
 import { NfcSuccessAnimation, estimateXp, levelFromXp } from '../../components/NfcSuccessExperience';
 import { canShowDebugUi, maskCardCode } from '../../lib/uiText';
+import { evaluateNfcDetectedFeedback, evaluateScanFeedback, runFeedbackEffects } from '../../services/scanFeedback';
 
 const MOCKS = ['MOCK-TAG-001', 'MOCK-TAG-002', 'MOCK-TAG-003'];
 
@@ -47,6 +47,7 @@ export default function MockScanScreen({ route, navigate }) {
   const activityTypes = useStore((s) => s.activityTypes);
   const activityLogs = useStore((s) => s.activityLogs);
   const getDailyGoalProgress = useStore((s) => s.getDailyGoalProgress);
+  const feedbackSettings = useStore((s) => s.feedbackSettings || { soundEnabled: true, hapticEnabled: true });
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const scanLockRef = useRef(false);
   const comboRef = useRef({ activityTypeId: null, count: 0, lastAt: 0 });
@@ -125,14 +126,24 @@ export default function MockScanScreen({ route, navigate }) {
       previousLevel,
       level,
       didLevelUp: level.level > previousLevel.level,
-      streakIncreased: true,
+      streakIncreased: combo > 1,
     };
   };
 
   const showSuccessThenHome = (log, activity) => {
     const data = buildSuccessData(log, activity);
-    setSuccessData(data);
-    playSoundEffect(data.didLevelUp ? 'goalComplete' : data.newPercent >= 150 ? 'overdrive' : data.newPercent >= 100 ? 'goalComplete' : 'scanSuccess');
+    const feedback = evaluateScanFeedback({
+      previousProgressPercent: data.oldPercent,
+      newProgressPercent: data.newPercent,
+      addedAmount: data.value,
+      activityName: data.activityName,
+      extraAmount: data.extra,
+      isStreakContinued: data.combo > 1,
+      hasCompletedGoalTodayBefore: data.oldPercent >= 100,
+      ...feedbackSettings,
+    });
+    setSuccessData({ ...data, feedback });
+    runFeedbackEffects(feedback, feedbackSettings);
     setTimeout(() => {
       setSuccessData(null);
       navigate('home', {
@@ -149,14 +160,13 @@ export default function MockScanScreen({ route, navigate }) {
   const simulateScan = () => {
     if (scanLockRef.current) return;
     scanLockRef.current = true;
-    playSoundEffect('nfcDetected');
+    runFeedbackEffects(evaluateNfcDetectedFeedback(feedbackSettings), feedbackSettings);
     const tag = createMockNfcTag(selected);
     const log = logActivityFromMockScan({ tenantId: activeTenantId, userId: profile?.id, mockUid: selected });
     if (log) {
       const activity = activityTypes.find((a) => a.id === log.activityTypeId);
       setUnknownTag(null);
       setMessage(null);
-      Vibration.vibrate([0, 70, 40, 120]);
       showSuccessThenHome(log, activity);
     } else {
       setUnknownTag({
@@ -173,7 +183,7 @@ export default function MockScanScreen({ route, navigate }) {
   const scanRealTag = async () => {
     if (scanLockRef.current) return;
     scanLockRef.current = true;
-    playSoundEffect('nfcDetected');
+    runFeedbackEffects(evaluateNfcDetectedFeedback(feedbackSettings), feedbackSettings);
     setNfcAdapterMode('native');
     setNfcAdapterStatus('scanning');
     setUnknownTag(null);
@@ -195,7 +205,6 @@ export default function MockScanScreen({ route, navigate }) {
     if (log) {
       const activity = activityTypes.find((a) => a.id === log.activityTypeId);
       setMessage(null);
-      Vibration.vibrate([0, 70, 40, 120]);
       showSuccessThenHome(log, activity);
       return;
     }

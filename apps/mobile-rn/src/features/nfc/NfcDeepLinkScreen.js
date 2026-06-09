@@ -4,7 +4,7 @@ import AppScreen from '../../components/AppScreen';
 import AppButton from '../../components/AppButton';
 import AppCard from '../../components/AppCard';
 import { NfcSuccessAnimation, estimateXp, levelFromXp } from '../../components/NfcSuccessExperience';
-import { playSoundEffect } from '../../services/soundEffects';
+import { evaluateNfcDetectedFeedback, evaluateScanFeedback, runFeedbackEffects } from '../../services/scanFeedback';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
 
@@ -15,6 +15,7 @@ export default function NfcDeepLinkScreen({ tagCode, navigate }) {
   const activityLogs = useStore((s) => s.activityLogs);
   const logActivityFromTagCode = useStore((s) => s.logActivityFromTagCode);
   const getNfcCardByTagCode = useStore((s) => s.getNfcCardByTagCode);
+  const feedbackSettings = useStore((s) => s.feedbackSettings || { soundEnabled: true, hapticEnabled: true });
   const [result, setResult] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const handledRef = useRef(false);
@@ -62,21 +63,32 @@ export default function NfcDeepLinkScreen({ tagCode, navigate }) {
       previousLevel,
       level,
       didLevelUp: level.level > previousLevel.level,
-      streakIncreased: true,
+      streakIncreased: false,
     };
   };
 
   useEffect(() => {
     if (!tagCode || !activeTenantId || handledRef.current) return undefined;
     handledRef.current = true;
+    runFeedbackEffects(evaluateNfcDetectedFeedback(feedbackSettings), feedbackSettings);
 
     const nextResult = logActivityFromTagCode({ tenantId: activeTenantId, userId: profile?.id, tagCode });
     setResult(nextResult);
 
     if (nextResult?.status === 'logged' && nextResult.log) {
       const data = buildSuccessData(nextResult.log, nextResult.assignment);
-      setSuccessData(data);
-      playSoundEffect(data.didLevelUp ? 'goalComplete' : data.newPercent >= 150 ? 'overdrive' : data.newPercent >= 100 ? 'goalComplete' : 'scanSuccess');
+      const feedback = evaluateScanFeedback({
+        previousProgressPercent: data.oldPercent,
+        newProgressPercent: data.newPercent,
+        addedAmount: data.value,
+        activityName: data.activityName,
+        extraAmount: data.extra,
+        isStreakContinued: false,
+        hasCompletedGoalTodayBefore: data.oldPercent >= 100,
+        ...feedbackSettings,
+      });
+      setSuccessData({ ...data, feedback });
+      runFeedbackEffects(feedback, feedbackSettings);
       redirectTimerRef.current = setTimeout(() => {
         setSuccessData(null);
         navigate('home', {
@@ -92,7 +104,7 @@ export default function NfcDeepLinkScreen({ tagCode, navigate }) {
     return () => {
       if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
     };
-  }, [activeTenantId, logActivityFromTagCode, profile?.id, tagCode]);
+  }, [activeTenantId, feedbackSettings, logActivityFromTagCode, profile?.id, tagCode]);
 
   const titleByStatus = {
     logged: 'NFC kaydı alındı',
@@ -102,6 +114,15 @@ export default function NfcDeepLinkScreen({ tagCode, navigate }) {
     lost: 'Bu NFC kart silinmiş/kayıp',
   };
   const status = result?.status || 'unknown';
+  const scannedTagUID = tagCode;
+  const registerUnknownTag = () => {
+    if (!scannedTagUID) return;
+    navigate('cards/register', {
+      scannedUid: scannedTagUID,
+      uidHash: `deeplink-${scannedTagUID.toUpperCase()}`,
+      scanSource: 'deeplink',
+    });
+  };
 
   return (
     <AppScreen>
@@ -127,12 +148,24 @@ export default function NfcDeepLinkScreen({ tagCode, navigate }) {
               </>
             ) : null}
             {status === 'unknown' ? (
-              <Text style={styles.meta}>{isOffline ? 'Bu kart bu cihazda çevrimdışı kullanılabilir değil.' : 'Kart bu alanda bulunamadı. Kartı tanımlayıp aktiviteye bağlayabilirsin.'}</Text>
+              <>
+                <Text style={styles.meta}>{isOffline ? 'Bu kart bu cihazda çevrimdışı kullanılabilir değil.' : 'Kart bu alanda bulunamadı. Kartı tanımlayıp aktiviteye bağlayabilirsin.'}</Text>
+                {scannedTagUID ? <Text style={styles.note}>Kart kodu: {scannedTagUID}</Text> : null}
+              </>
             ) : null}
           </AppCard>
           <View style={styles.actions}>
-            <AppButton onPress={() => navigate('home')}>Ana sayfa</AppButton>
-            <AppButton onPress={() => navigate('cards')} style={styles.secondaryButton}>Kartlarım</AppButton>
+            {status === 'unknown' ? (
+              <>
+                <AppButton onPress={registerUnknownTag}>Bu Kartı Tanımla</AppButton>
+                <AppButton onPress={() => navigate('home')} style={styles.secondaryButton}>Vazgeç / Ana Sayfa</AppButton>
+              </>
+            ) : (
+              <>
+                <AppButton onPress={() => navigate('home')}>Ana sayfa</AppButton>
+                <AppButton onPress={() => navigate('cards')} style={styles.secondaryButton}>Kartlarım</AppButton>
+              </>
+            )}
           </View>
         </>
       ) : null}

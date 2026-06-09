@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Text, StyleSheet, Pressable, ScrollView, View, Vibration } from 'react-native';
+import { Text, StyleSheet, Pressable, ScrollView, View } from 'react-native';
 import AppScreen from '../../components/AppScreen';
 import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
@@ -7,7 +7,7 @@ import AppCard from '../../components/AppCard';
 import BottomNav from '../../components/BottomNav';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
-import { playSoundEffectSoon } from '../../services/soundEffects';
+import { evaluateScanFeedback, runFeedbackEffects } from '../../services/scanFeedback';
 import { displayDifficulty, displayTrackingMode, displayUnit, displayWorkoutCategory } from '../../lib/uiText';
 
 export default function ManualLogScreen({ route, navigate }) {
@@ -24,6 +24,7 @@ export default function ManualLogScreen({ route, navigate }) {
   const updateCardAssignment = useStore((s) => s.updateCardAssignment);
   const setActivityDailyGoal = useStore((s) => s.setActivityDailyGoal);
   const getDailyGoalProgress = useStore((s) => s.getDailyGoalProgress);
+  const feedbackSettings = useStore((s) => s.feedbackSettings || { soundEnabled: true, hapticEnabled: true });
   const isSingleActivityMode = Boolean(initialActivityName);
   const [category, setCategory] = useState(initialCategory === 'wellness' ? 'wellness' : 'fitness');
   const [scope, setScope] = useState(initialActivityName ? 'library' : 'tracked');
@@ -74,8 +75,21 @@ export default function ManualLogScreen({ route, navigate }) {
       value: Number(value) || selectedActivity.defaultIncrement,
       source: 'manual',
     });
-    Vibration.vibrate([0, 50, 30, 90]);
-    playSoundEffectSoon('scanSuccess', 40);
+    const addedValue = Number(log?.value || value || selectedActivity.defaultIncrement) || 0;
+    const targetValue = Number(goalProgress?.target || displayedGoal) || 0;
+    const previousTotal = Number(goalProgress?.total) || 0;
+    const previousPercent = targetValue ? Math.round((previousTotal / targetValue) * 100) : 0;
+    const newPercent = targetValue ? Math.round(((previousTotal + addedValue) / targetValue) * 100) : 0;
+    const feedback = evaluateScanFeedback({
+      previousProgressPercent: previousPercent,
+      newProgressPercent: newPercent,
+      addedAmount: addedValue,
+      activityName: selectedActivity.displayNameTr,
+      extraAmount: targetValue ? Math.max(0, previousTotal + addedValue - targetValue) : 0,
+      hasCompletedGoalTodayBefore: previousPercent >= 100,
+      ...feedbackSettings,
+    });
+    runFeedbackEffects(feedback, feedbackSettings);
     navigate('home', {
       celebration: `${selectedActivity.displayNameTr} kaydedildi`,
       activityTypeId: selectedActivity.id,

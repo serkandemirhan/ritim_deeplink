@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, Text, StyleSheet, Vibration, View } from 'react-native';
+import { Animated, Pressable, Text, StyleSheet, View } from 'react-native';
 import AppScreen from '../../components/AppScreen';
 import AppButton from '../../components/AppButton';
 import AppCard from '../../components/AppCard';
@@ -7,7 +7,7 @@ import ActivityIcon from '../../components/ActivityIcon';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
 import { displayUnit, maskCardCode } from '../../lib/uiText';
-import { playSoundEffectSoon } from '../../services/soundEffects';
+import { evaluateScanFeedback, runFeedbackEffects } from '../../services/scanFeedback';
 
 export default function CardSuccessScreen({ route, navigate }) {
   const cardIdParam = route?.params?.cardId;
@@ -15,6 +15,7 @@ export default function CardSuccessScreen({ route, navigate }) {
   const cards = useStore((s) => s.tenantNfcCards);
   const assignments = useStore((s) => s.cardAssignments);
   const activityTypes = useStore((s) => s.activityTypes);
+  const feedbackSettings = useStore((s) => s.feedbackSettings || { soundEnabled: true, hapticEnabled: true });
   const card = cards.find((item) => item.id === cardId);
   const assignment = assignments.find((item) => item.tenantCardId === cardId);
   const activity = assignment ? activityTypes.find((item) => item.id === assignment.activityTypeId) : null;
@@ -24,13 +25,20 @@ export default function CardSuccessScreen({ route, navigate }) {
   const checkOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Vibration.vibrate([0, 45, 35, 70]);
-    playSoundEffectSoon(isUnassigned ? 'scanSuccess' : 'goalComplete', 80);
+    const feedback = evaluateScanFeedback({
+      previousProgressPercent: 0,
+      newProgressPercent: isUnassigned ? 0 : 100,
+      addedAmount: assignment?.incrementValue || 1,
+      activityName: activity?.displayNameTr || 'kart',
+      hasCompletedGoalTodayBefore: false,
+      ...feedbackSettings,
+    });
+    runFeedbackEffects(feedback, feedbackSettings);
     Animated.parallel([
       Animated.timing(checkOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
       Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 92, useNativeDriver: true }),
     ]).start();
-  }, [checkOpacity, checkScale, isUnassigned]);
+  }, [activity?.displayNameTr, assignment?.incrementValue, checkOpacity, checkScale, feedbackSettings, isUnassigned]);
 
   const unitLabel = displayUnit(assignment?.unit || activity?.unit || '');
 

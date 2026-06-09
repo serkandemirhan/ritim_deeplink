@@ -330,6 +330,7 @@ const useStore = create(persist((set, get) => ({
   challengeParticipants: initialPersistedState.challengeParticipants || [],
   syncQueue: initialPersistedState.syncQueue || [],
   nfcAdapter: initialPersistedState.nfcAdapter || { mode: 'native', status: 'ready', lastError: null },
+  feedbackSettings: initialPersistedState.feedbackSettings || { soundEnabled: true, hapticEnabled: true },
 
   // Actions
   createProfile: (fullName, email, details = {}) => {
@@ -1297,6 +1298,16 @@ const useStore = create(persist((set, get) => ({
     set((s) => ({ nfcAdapter: { ...s.nfcAdapter, status, lastError } }));
   },
 
+  setFeedbackSettings: (updates = {}) => {
+    set((s) => ({
+      feedbackSettings: {
+        soundEnabled: s.feedbackSettings?.soundEnabled !== false,
+        hapticEnabled: s.feedbackSettings?.hapticEnabled !== false,
+        ...updates,
+      },
+    }));
+  },
+
   setDevToolsEnabled: (enabled) => {
     set((s) => ({
       devToolsEnabled: Boolean(enabled),
@@ -1447,6 +1458,7 @@ const useStore = create(persist((set, get) => ({
     challengeParticipants: persistedState?.challengeParticipants || [],
     syncQueue: persistedState?.syncQueue || [],
     nfcAdapter: persistedState?.nfcAdapter ? { ...persistedState.nfcAdapter, mode: persistedState?.devToolsEnabled ? persistedState.nfcAdapter.mode : 'native' } : { mode: 'native', status: 'ready', lastError: null },
+    feedbackSettings: persistedState?.feedbackSettings || { soundEnabled: true, hapticEnabled: true },
   }),
   partialize: (state) => ({
     profile: state.profile,
@@ -1473,6 +1485,7 @@ const useStore = create(persist((set, get) => ({
     challengeParticipants: state.challengeParticipants,
     syncQueue: state.syncQueue,
     nfcAdapter: state.nfcAdapter,
+    feedbackSettings: state.feedbackSettings,
   }),
 }));
 

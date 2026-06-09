@@ -32,7 +32,8 @@ export function fireState(percent = 0) {
   return { label: '', hot: false };
 }
 
-export function statusMessage(percent = 0, extra = 0, unit = 'tekrar') {
+export function statusMessage(percent = 0, extra = 0, unit = 'tekrar', feedback = null) {
+  if (feedback?.message) return feedback.message;
   if (percent >= 150) return `🔥 Ateştesin! +${extra} ${unit} fazla`;
   if (percent >= 100) return '🎯 Günlük hedef tamamlandı';
   if (percent >= 80) return 'Hedefe çok yaklaştın';
@@ -164,17 +165,22 @@ export function NfcSuccessAnimation({ data }) {
   }, [card, data, dim, progress, reward]);
 
   if (!data) return null;
+  const feedback = data.feedback || null;
   const fire = fireState(data.newPercent);
-  const progressWidth = progress.interpolate({ inputRange: [0, 250], outputRange: ['0%', '250%'], extrapolate: 'clamp' });
+  const isFireMode = fire.hot || feedback?.feedbackType === 'overdrive';
+  const progressWidth = progress.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'], extrapolate: 'clamp' });
+  const progressLabel = data.newPercent > 100
+    ? `${data.oldTotal} / ${data.target} → 100% tamamlandı`
+    : `${data.oldTotal} / ${data.target} → ${data.newTotal} / ${data.target}`;
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
       <Animated.View style={[styles.dim, { opacity: dim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.72] }) }]} />
       <ComboBanner combo={data.combo} />
-      <Animated.View style={[styles.successCard, fire.hot && styles.successCardFire, {
+      <Animated.View style={[styles.successCard, isFireMode && styles.successCardFire, feedback?.animationType === 'confetti' && styles.successCardGoal, {
         opacity: card,
         transform: [{ scale: card }],
       }]}>
-        <Text style={styles.detected}>⚡ NFC ALGILANDI</Text>
+        <Text style={[styles.detected, isFireMode && styles.fireText]}>{feedback?.title || 'Kart algılandı'}</Text>
         <View style={styles.nfcTile}>
           <Text style={styles.nfcIcon}>)))</Text>
         </View>
@@ -182,14 +188,19 @@ export function NfcSuccessAnimation({ data }) {
           opacity: reward.interpolate({ inputRange: [0, 0.75, 1], outputRange: [0, 1, 0] }),
           transform: [{ translateY: reward.interpolate({ inputRange: [0, 1], outputRange: [20, -50] }) }],
         }]}>
-          <Text style={styles.rewardValue}>+{data.value}</Text>
+          <Text style={[styles.rewardValue, isFireMode && styles.rewardValueFire]}>+{data.value}</Text>
           <Text style={styles.rewardLabel}>{String(data.activityName || '').toUpperCase()}</Text>
         </Animated.View>
-        <Text style={styles.progressText}>{data.oldTotal} / {data.target} → {data.newTotal} / {data.target}</Text>
+        <Text style={styles.progressText}>{progressLabel}</Text>
         <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, fire.hot && styles.progressFillFire, { width: progressWidth }]} />
+          <Animated.View style={[styles.progressFill, isFireMode && styles.progressFillFire, { width: progressWidth }]} />
         </View>
-        <Text style={[styles.status, fire.hot && styles.fireText]}>{statusMessage(data.newPercent, data.extra, data.unit)}</Text>
+        {feedback?.showExtraProgressBadge && data.extra > 0 ? (
+          <View style={styles.extraBadge}>
+            <Text style={styles.extraBadgeText}>+{data.extra} ekstra · %{Math.round(data.newPercent)} Overdrive</Text>
+          </View>
+        ) : null}
+        <Text style={[styles.status, isFireMode && styles.fireText]}>{statusMessage(data.newPercent, data.extra, data.unit, feedback)}</Text>
         <FireBadge percent={data.newPercent} />
         <View style={styles.xpBar}>
           <Text style={styles.xpLabel}>Seviye {data.level.level} · {data.level.name}</Text>
@@ -209,16 +220,20 @@ const styles = StyleSheet.create({
   comboText: { color: '#40E0D0', fontWeight: '900' },
   successCard: { position: 'absolute', left: 24, right: 24, top: 112, minHeight: 390, borderRadius: 26, borderWidth: 1, borderColor: '#40E0D0', backgroundColor: 'rgba(13,24,40,0.96)', alignItems: 'center', padding: 20, shadowColor: '#40E0D0', shadowOpacity: 0.36, shadowRadius: 22 },
   successCardFire: { borderColor: colors.orange, shadowColor: colors.orange },
+  successCardGoal: { borderColor: colors.primary, shadowColor: colors.primary, shadowOpacity: 0.42 },
   detected: { color: '#40E0D0', fontSize: 14, fontWeight: '900', letterSpacing: 0, marginBottom: 12 },
   nfcTile: { width: 88, height: 88, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceLight, borderColor: colors.border, borderWidth: 1 },
   nfcIcon: { color: colors.textPrimary, fontSize: 28, fontWeight: '900' },
   reward: { alignItems: 'center', height: 78, marginTop: 10 },
   rewardValue: { color: '#40E0D0', fontSize: 54, fontWeight: '900', lineHeight: 58 },
+  rewardValueFire: { color: colors.orange },
   rewardLabel: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
   progressText: { color: colors.textPrimary, fontWeight: '900', marginTop: 8 },
   progressTrack: { width: '100%', height: 13, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.border, marginTop: 12 },
   progressFill: { height: '100%', backgroundColor: '#40E0D0', shadowColor: '#40E0D0', shadowOpacity: 0.8, shadowRadius: 12 },
   progressFillFire: { backgroundColor: colors.orange, shadowColor: colors.orange },
+  extraBadge: { marginTop: 9, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: 'rgba(255,138,42,0.14)', borderColor: colors.orange, borderWidth: 1 },
+  extraBadgeText: { color: colors.orange, fontSize: 12, fontWeight: '900' },
   status: { color: '#40E0D0', fontWeight: '900', marginTop: 13, textAlign: 'center' },
   fireText: { color: colors.orange },
   fireBadge: { marginTop: 10, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, backgroundColor: 'rgba(255,138,42,0.14)', borderColor: colors.orange, borderWidth: 1 },

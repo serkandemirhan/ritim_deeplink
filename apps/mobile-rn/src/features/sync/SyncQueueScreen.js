@@ -33,8 +33,13 @@ export default function SyncQueueScreen({ navigate }) {
   const markAllSyncedForTenant = useStore((s) => s.markAllSyncedForTenant);
   const [status, setStatus] = useState(isSupabaseConfigured ? 'Senkronizasyon hazır.' : 'Senkronizasyon şu anda kapalı.');
   const queue = syncQueue.filter((item) => !item.tenantId || item.tenantId === activeTenantId);
-  const pendingCount = queue.filter((item) => item.status === 'pending' || item.status === 'failed').length;
+  const pendingSyncCount = queue.filter((item) => item.status === 'pending' || item.status === 'failed').length;
+  const isSyncButtonEnabled = isSupabaseConfigured && pendingSyncCount > 0;
+  const syncButtonText = pendingSyncCount === 0
+    ? 'Senkronize Edilecek Veri Yok'
+    : `Bekleyenleri senkronize et (${pendingSyncCount})`;
   const runSync = async () => {
+    if (!isSyncButtonEnabled) return;
     try {
       setStatus('Senkronize ediliyor...');
       await syncQueueItems({ queue, markSyncQueueItem, markEntitySynced, markEntitySyncFailed });
@@ -82,8 +87,8 @@ export default function SyncQueueScreen({ navigate }) {
     <AppScreen>
       <SectionHeader title="Senkronizasyon" />
       <Text style={styles.status}>{status}</Text>
-      <AppButton onPress={runSync} style={[styles.syncButton, !isSupabaseConfigured && styles.disabledButton]}>
-        Bekleyenleri senkronize et ({pendingCount})
+      <AppButton disabled={!isSyncButtonEnabled} onPress={runSync} style={[styles.syncButton, !isSyncButtonEnabled && styles.disabledButton]} textStyle={!isSyncButtonEnabled && styles.disabledButtonText}>
+        {syncButtonText}
       </AppButton>
       <View style={styles.actionRow}>
         <AppButton onPress={pullRemote} style={[styles.rowButton, !isSupabaseConfigured && styles.disabledButton]}>Verileri al</AppButton>
@@ -119,6 +124,7 @@ const styles = StyleSheet.create({
   rowButton: { flex: 1, paddingVertical: 10, backgroundColor: colors.surfaceLight },
   importButton: { backgroundColor: colors.secondary, shadowColor: colors.secondary },
   disabledButton: { backgroundColor: colors.surfaceLight, shadowOpacity: 0.1 },
+  disabledButtonText: { color: colors.textSecondary },
   card: { marginBottom: 10 },
   title: { color: colors.textPrimary, fontWeight: '900' },
   meta: { color: colors.textSecondary, marginTop: 4 },
