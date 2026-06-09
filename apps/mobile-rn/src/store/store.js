@@ -216,6 +216,60 @@ const calculateCalories = (activity, value, profile) => {
   const intensity = intensityMultiplier[activity.intensity || 'medium'] || 1;
   return Math.round(value * activity.caloriesPerUnit * weightFactor * intensity);
 };
+const DEFAULT_DASHBOARD_NAMES = ['push_ups', 'water', 'coffee', 'walking', 'pull_ups'];
+const PRIORITY_CARD_FALLBACKS = [
+  { name: 'push_ups', displayNameTr: 'Şınav', unit: 'reps', total: 60, target: 110, percent: 55, defaultIncrement: 10, category: 'fitness' },
+  { name: 'walking', displayNameTr: 'Yürüyüş', unit: 'min', total: 40, target: 30, percent: 100, defaultIncrement: 10, category: 'fitness' },
+  { name: 'pull_ups', displayNameTr: 'Pull-up', unit: 'reps', total: 10, target: 15, percent: 67, defaultIncrement: 5, category: 'fitness' },
+];
+const WELLNESS_CARD_FALLBACKS = [
+  { name: 'water', displayNameTr: 'Su', unit: 'ml', total: 500, target: 2500, percent: 20, defaultIncrement: 500, category: 'wellness' },
+  { name: 'coffee', displayNameTr: 'Kahve', unit: 'cup', total: 1, target: 3, percent: 33, defaultIncrement: 1, category: 'wellness' },
+  { name: 'meditation', displayNameTr: 'Meditasyon', unit: 'min', total: 10, target: 20, percent: 50, defaultIncrement: 10, category: 'wellness' },
+];
+const computeProgress = (totalValue, targetValue) => {
+  const total = Number(totalValue) || 0;
+  const target = Number(targetValue) || 0;
+  const rawPercent = target > 0 ? Math.max(0, Math.round((total / target) * 100)) : 0;
+  const percent = Math.min(100, rawPercent);
+  return {
+    total,
+    target,
+    rawPercent,
+    percent,
+    progressPercent: percent,
+    extra: Math.max(0, total - target),
+    isComplete: rawPercent >= 100,
+    isOverdrive: rawPercent >= 150,
+  };
+};
+const averageProgress = (items) => {
+  const valid = (items || []).filter((item) => typeof item?.rawPercent === 'number' || typeof item?.percent === 'number');
+  if (!valid.length) return undefined;
+  return Math.round(valid.reduce((sum, item) => sum + Number(item.rawPercent ?? item.percent ?? 0), 0) / valid.length);
+};
+const isWithinDashboardRange = (dateValue, range) => {
+  const date = new Date(dateValue);
+  const current = new Date();
+  if (range === 'day') return date.toDateString() === current.toDateString();
+  const start = new Date(current);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (range === 'week' ? 6 : 29));
+  return date >= start;
+};
+const startOfDashboardDay = (date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+const getShortDashboardDayLabel = (date) => new Intl.DateTimeFormat('tr-TR', { weekday: 'short' }).format(date).replace('.', '');
+const getActivityStatusMessage = ({ rawPercent = 0, extra = 0, unit = '' }) => {
+  if (rawPercent < 50) return 'Başlamak için iyi bir an.';
+  if (rawPercent < 80) return 'Ritmin oluşuyor, devam et.';
+  if (rawPercent < 100) return 'Hedefe çok yaklaştın.';
+  if (rawPercent < 150) return 'Hedef tamamlandı, harika iş.';
+  return `Ateştesin! Hedefi aştın.${extra > 0 ? ` +${extra} ${unit} fazla` : ''}`;
+};
 const noopStorage = {
   getItem: () => null,
   setItem: () => undefined,
@@ -1402,7 +1456,12 @@ const useStore = create(persist((set, get) => ({
         const total = todays
           .filter((log) => log.activityTypeId === goal.activityTypeId)
           .reduce((sum, log) => sum + (log.value || 0), 0);
-        return { assignment: goal.source === 'assignment' ? goal : null, goal, activity, total, target: goal.dailyGoal, percent: Math.min(100, Math.round((total / goal.dailyGoal) * 100)) };
+        return {
+          assignment: goal.source === 'assignment' ? goal : null,
+          goal,
+          activity,
+          ...computeProgress(total, goal.dailyGoal),
+        };
       });
   },
 
@@ -1416,6 +1475,231 @@ const useStore = create(persist((set, get) => ({
       cursor.setDate(cursor.getDate() - 1);
     }
     return streak;
+  },
+
+  getDashboardComputedData: (range = 'week') => {
+    const state = get();
+    const activeTenantId = state.activeTenantId;
+    const activityTypes = state.activityTypes || [];
+    const activityLogs = state.activityLogs || [];
+    const cardAssignments = state.cardAssignments || [];
+    const trackedActivityTypeIds = state.trackedActivityTypeIds || [];
+    const dashboardActivityOrder = state.dashboardActivityOrder || [];
+    const today = new Date().toDateString();
+    const activeLogs = activityLogs.filter((log) => log.tenantId === activeTenantId);
+    const rangeLogs = activeLogs.filter((log) => isWithinDashboardRange(log.loggedAt, range));
+    const activityById = new Map(activityTypes.map((activity) => [activity.id, activity]));
+    const rangeStats = {
+      workoutsCount: rangeLogs.filter((log) => log.category === 'fitness').length,
+      wellnessCount: rangeLogs.filter((log) => log.category === 'wellness').length,
+      waterTotal: rangeLogs
+        .filter((log) => activityById.get(log.activityTypeId)?.name === 'water')
+        .reduce((sum, log) => sum + (Number(log.value) || 0), 0),
+      caloriesTotal: Math.round(rangeLogs.reduce((sum, log) => sum + (Number(log.calories) || 0), 0)),
+      nfcVerified: rangeLogs.filter((log) => log.source === 'mock_nfc' || log.source === 'nfc').length,
+      totalLogs: rangeLogs.length,
+    };
+    const goalProgress = state.getDailyGoalProgress();
+    const streak = state.getCurrentStreak();
+    const routineSummaries = state.getRoutineTodaySummaries()
+      .filter((item) => item.isPlannedToday)
+      .slice(0, 4);
+    const routineActivityIds = new Set(routineSummaries.map(({ routine }) => routine.activityTypeId).filter(Boolean));
+    const routineActivityNames = new Set(
+      routineSummaries
+        .map(({ routine }) => activityTypes.find((activity) => activity.id === routine.activityTypeId)?.name)
+        .filter(Boolean)
+    );
+    const routineSummaryItems = routineSummaries.map(({ routine, plan, log }) => {
+      const target = log?.plannedTotalUnits || (plan?.targetType === 'set_based' ? (Number(plan.targetSets) || 0) * (Number(plan.targetRepsPerSet) || 0) : Number(plan?.targetTotalUnits) || 0);
+      return {
+        id: routine.id,
+        name: routine.name,
+        ...computeProgress(log?.completedTotalUnits || 0, target),
+      };
+    });
+    const activitySummaryItems = goalProgress
+      .filter((item) => !routineActivityIds.has(item.activity?.id))
+      .map((item) => ({
+        id: item.activity?.id,
+        name: item.activity?.displayNameTr || 'Aktivite',
+        total: item.total,
+        target: item.target,
+        rawPercent: item.rawPercent,
+        percent: item.percent,
+        progressPercent: item.progressPercent,
+        extra: item.extra,
+        isComplete: item.isComplete,
+        isOverdrive: item.isOverdrive,
+      }));
+    const summaryItems = [...routineSummaryItems, ...activitySummaryItems]
+      .filter((item) => item.id && item.target)
+      .slice(0, 5);
+    const summaryPercent = summaryItems.length
+      ? Math.round(summaryItems.reduce((sum, item) => sum + item.progressPercent, 0) / summaryItems.length)
+      : 0;
+    const summaryCompleted = summaryItems.filter((item) => item.rawPercent >= 100).length;
+    const gamificationScore = summaryItems.reduce((sum, item) => sum + (item.rawPercent >= 100 ? 100 : 0) + Math.max(0, item.rawPercent - 100), 0);
+    const energyValue = Math.min(100, Math.round(summaryPercent * 0.7 + (rangeStats.totalLogs || 0) * 8 + (streak || 0) * 2));
+    const assignedIds = cardAssignments
+      .filter((assignment) => assignment.tenantId === activeTenantId)
+      .map((assignment) => assignment.activityTypeId);
+    const loggedIds = rangeLogs.map((log) => log.activityTypeId);
+    const candidateNames = new Set(DEFAULT_DASHBOARD_NAMES);
+    const candidateIds = new Set([...assignedIds, ...loggedIds, ...trackedActivityTypeIds]);
+    const goalByActivityId = new Map(goalProgress.map((goal) => [goal.activity?.id, goal]));
+    const activityCards = activityTypes
+      .filter((activity) => activity.tenantId === activeTenantId && (candidateNames.has(activity.name) || candidateIds.has(activity.id)))
+      .map((activity) => {
+        const goal = goalByActivityId.get(activity.id);
+        const assignment = cardAssignments
+          .filter((item) => item.tenantId === activeTenantId && item.activityTypeId === activity.id)
+          .sort((a, b) => Number(b.dailyGoal || 0) - Number(a.dailyGoal || 0))[0];
+        const logsForActivity = rangeLogs.filter((log) => log.activityTypeId === activity.id);
+        const todaysLogs = activeLogs.filter((log) => log.activityTypeId === activity.id && new Date(log.loggedAt).toDateString() === today);
+        const latest = activeLogs
+          .filter((log) => log.activityTypeId === activity.id)
+          .sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt))[0];
+        const total = logsForActivity.reduce((sum, log) => sum + (Number(log.value) || 0), 0);
+        const target = Number(assignment?.dailyGoal || goal?.target || activity.defaultIncrement * (activity.unit === 'ml' ? 5 : 3));
+        const progress = computeProgress(total, target);
+        return {
+          activity,
+          assignment,
+          ...progress,
+          statusMessage: getActivityStatusMessage({ rawPercent: progress.rawPercent, extra: progress.extra, unit: activity.unit }),
+          todayCount: todaysLogs.length,
+          lastValue: latest?.value || null,
+          lastLoggedAt: latest?.loggedAt || null,
+          defaultIncrement: activity.defaultIncrement,
+        };
+      });
+    const byId = new Map(activityCards.map((item) => [item.activity.id, item]));
+    const orderedCards = dashboardActivityOrder.map((id_) => byId.get(id_)).filter(Boolean);
+    const remainingCards = activityCards.filter((item) => !dashboardActivityOrder.includes(item.activity.id));
+    const orderedActivityCards = [...orderedCards, ...remainingCards]
+      .filter((item) => !routineActivityIds.has(item.activity.id))
+      .map((item, orderIndex) => ({ ...item, orderIndex }));
+    const createFallbackCard = (fallback, index) => {
+      const existing = orderedActivityCards.find((item) => item.activity.name === fallback.name);
+      if (existing) return existing;
+      const progress = computeProgress(fallback.total, fallback.target);
+      return {
+        activity: {
+          id: fallback.name,
+          name: fallback.name,
+          displayNameTr: fallback.displayNameTr,
+          unit: fallback.unit,
+          category: fallback.category,
+          defaultIncrement: fallback.defaultIncrement,
+          color: null,
+        },
+        assignment: null,
+        ...progress,
+        statusMessage: getActivityStatusMessage({ rawPercent: progress.rawPercent, extra: progress.extra, unit: fallback.unit }),
+        todayCount: fallback.total ? 1 : 0,
+        lastValue: fallback.defaultIncrement,
+        lastLoggedAt: null,
+        defaultIncrement: fallback.defaultIncrement,
+        orderIndex: index,
+      };
+    };
+    const buildDashboardCards = (fallbacks, category) => {
+      const fallbackNames = new Set(fallbacks.map((item) => item.name));
+      const fallbackCards = fallbacks
+        .filter((fallback) => !routineActivityNames.has(fallback.name))
+        .map(createFallbackCard);
+      const trackedCards = orderedActivityCards.filter((item) => item.activity.category === category && !fallbackNames.has(item.activity.name));
+      return [...fallbackCards, ...trackedCards];
+    };
+    const priorityCards = buildDashboardCards(PRIORITY_CARD_FALLBACKS, 'fitness');
+    const wellnessCards = buildDashboardCards(WELLNESS_CARD_FALLBACKS, 'wellness');
+    const fitnessProgress = averageProgress(goalProgress.filter((item) => item.activity?.category === 'fitness'));
+    const wellnessProgress = averageProgress(goalProgress.filter((item) => item.activity?.category === 'wellness'));
+    const waterProgress = goalProgress.find((item) => item.activity?.name === 'water')?.rawPercent;
+    const totalProgress = averageProgress(goalProgress);
+    const buildRangeTrend = () => {
+      if (range === 'day') return null;
+      const totals = rangeLogs.reduce((acc, log) => {
+        acc[log.activityTypeId] = (acc[log.activityTypeId] || 0) + (Number(log.value) || 0);
+        return acc;
+      }, {});
+      const water = activityTypes.find((activity) => activity.tenantId === activeTenantId && activity.name === 'water');
+      const running = activityTypes.find((activity) => activity.tenantId === activeTenantId && activity.name === 'running');
+      const topActivityId = Object.entries(totals).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const activity = (water && (totals[water.id] || range === 'week') ? water : null)
+        || (running && totals[running.id] ? running : activityTypes.find((item) => item.id === topActivityId))
+        || water
+        || running;
+      if (!activity) return null;
+      const assignment = cardAssignments.find((item) => item.tenantId === activeTenantId && item.activityTypeId === activity.id && item.dailyGoal);
+      const dailyTarget = Number(assignment?.dailyGoal) || (activity.name === 'water' ? 2500 : activity.defaultIncrement) || 1;
+      const currentDayStart = startOfDashboardDay(new Date());
+      const buckets = range === 'week'
+        ? Array.from({ length: 7 }).map((_, index) => {
+            const date = new Date(currentDayStart);
+            date.setDate(currentDayStart.getDate() - (6 - index));
+            return { key: date.toISOString().slice(0, 10), label: getShortDashboardDayLabel(date), start: date, end: new Date(date.getTime() + 86400000), target: dailyTarget };
+          })
+        : Array.from({ length: 4 }).map((_, index) => {
+            const start = new Date(currentDayStart);
+            start.setDate(currentDayStart.getDate() - ((3 - index) * 7 + 6));
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return { key: String(index), label: `${index + 1}. hf`, start, end, target: dailyTarget * 7 };
+          });
+      const values = buckets.map((bucket) => {
+        const total = rangeLogs
+          .filter((log) => log.activityTypeId === activity.id)
+          .filter((log) => {
+            const date = new Date(log.loggedAt);
+            return date >= bucket.start && date < bucket.end;
+          })
+          .reduce((sum, log) => sum + (Number(log.value) || 0), 0);
+        return { ...bucket, ...computeProgress(total, bucket.target) };
+      });
+      const maxValue = Math.max(...values.map((item) => item.total), dailyTarget, 1);
+      const displayValues = values.map((item) => ({
+        ...item,
+        barHeight: Math.max(8, Math.round((item.total / maxValue) * 96)),
+        goalBottom: Math.min(92, Math.round((item.target / maxValue) * 96)),
+      }));
+      const total = values.reduce((sum, item) => sum + item.total, 0);
+      const targetTotal = values.reduce((sum, item) => sum + item.target, 0);
+      const progress = computeProgress(total, targetTotal);
+      return { activity, values: displayValues, maxValue, total, targetTotal, ...progress };
+    };
+
+    return {
+      range,
+      rangeLogs,
+      stats: rangeStats,
+      recent: activeLogs.slice(0, 3),
+      goalProgress,
+      streak,
+      routineSummaries,
+      routineActivityIds: Array.from(routineActivityIds),
+      summaryItems,
+      summaryPercent,
+      summaryCompleted,
+      gamificationScore,
+      energyValue,
+      statProgress: {
+        fitness: fitnessProgress,
+        wellness: wellnessProgress,
+        water: waterProgress,
+        total: totalProgress,
+      },
+      activityCards: orderedActivityCards,
+      priorityCards,
+      wellnessCards,
+      rangeTrend: buildRangeTrend(),
+      nfc: {
+        isBackgroundListeningActive: state.nfcAdapter?.mode === 'native' && state.nfcAdapter?.status === 'ready' && !state.nfcAdapter?.lastError,
+        status: state.nfcAdapter?.status || 'ready',
+        mode: state.nfcAdapter?.mode || 'native',
+      },
+    };
   },
 
   getAssignmentForTenantCard: (tenantCardId) => get().cardAssignments.find((a) => a.tenantCardId === tenantCardId) || null,

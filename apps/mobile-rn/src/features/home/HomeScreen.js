@@ -9,7 +9,7 @@ import ActivityIcon from '../../components/ActivityIcon';
 import useStore from '../../store/store';
 import colors from '../../theme/colors';
 import { RoutineCard } from '../routines/RoutineComponents';
-import { GoalSummaryCard, NFCResultCard, goalPercent } from '../../components/RitimFeedback';
+import { GoalSummaryCard, NFCResultCard } from '../../components/RitimFeedback';
 import { EnergyMeter } from '../../components/NfcSuccessExperience';
 import { displaySource, displayUnit } from '../../lib/uiText';
 
@@ -27,17 +27,6 @@ const dashboardIcons = {
 };
 
 const isWeb = Platform.OS === 'web';
-const DEFAULT_DASHBOARD_NAMES = ['push_ups', 'water', 'coffee', 'walking', 'pull_ups'];
-const PRIORITY_CARD_FALLBACKS = [
-  { name: 'push_ups', displayNameTr: 'Şınav', unit: 'reps', total: 60, target: 110, percent: 55, defaultIncrement: 10, category: 'fitness' },
-  { name: 'walking', displayNameTr: 'Yürüyüş', unit: 'min', total: 40, target: 30, percent: 100, defaultIncrement: 10, category: 'fitness' },
-  { name: 'pull_ups', displayNameTr: 'Pull-up', unit: 'reps', total: 10, target: 15, percent: 67, defaultIncrement: 5, category: 'fitness' },
-];
-const WELLNESS_CARD_FALLBACKS = [
-  { name: 'water', displayNameTr: 'Su', unit: 'ml', total: 500, target: 2500, percent: 20, defaultIncrement: 500, category: 'wellness' },
-  { name: 'coffee', displayNameTr: 'Kahve', unit: 'cup', total: 1, target: 3, percent: 33, defaultIncrement: 1, category: 'wellness' },
-  { name: 'meditation', displayNameTr: 'Meditasyon', unit: 'min', total: 10, target: 20, percent: 50, defaultIncrement: 10, category: 'wellness' },
-];
 const RANGE_OPTIONS = [
   { key: 'day', label: 'Gün' },
   { key: 'week', label: 'Hafta' },
@@ -55,7 +44,6 @@ const HOME_MENU_ITEMS = [
 
 function HomeActionRow({ navigate }) {
   const actions = [
-    { label: 'NFC tara', icon: '⌁', route: 'mock-scan', styleKey: 'homeActionScan' },
     { label: 'Manuel kayıt ekle', icon: '+', route: 'manual-log', params: { category: 'fitness' }, styleKey: 'homeActionManual' },
     { label: 'Planları gör', icon: '↗', route: 'routines', styleKey: 'homeActionPlans' },
   ];
@@ -75,100 +63,26 @@ function HomeActionRow({ navigate }) {
   );
 }
 
-function getActivityStatusMessage(item) {
-  const percent = Number(item.rawPercent || 0);
-  const unit = displayUnit(item.activity.unit);
-  if (percent < 50) return 'Başlamak için iyi bir an.';
-  if (percent < 80) return 'Ritmin oluşuyor, devam et.';
-  if (percent < 100) return 'Hedefe çok yaklaştın.';
-  if (percent < 150) return 'Hedef tamamlandı, harika iş.';
-  return `🔥 Ateştesin! Hedefi aştın.${item.extra > 0 ? ` +${item.extra} ${unit} fazla` : ''}`;
-}
-
-function isWithinRange(dateValue, range) {
-  const date = new Date(dateValue);
-  const now = new Date();
-  if (range === 'day') return date.toDateString() === now.toDateString();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - (range === 'week' ? 6 : 29));
-  return date >= start;
-}
-
-function startOfDay(date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function getShortDayLabel(date) {
-  return new Intl.DateTimeFormat('tr-TR', { weekday: 'short' }).format(date).replace('.', '');
-}
-
-function RangeTrendChart({ range, logs, activities, assignments, activeTenantId }) {
-  if (range === 'day') return null;
-  const totals = logs.reduce((acc, log) => {
-    acc[log.activityTypeId] = (acc[log.activityTypeId] || 0) + (Number(log.value) || 0);
-    return acc;
-  }, {});
-  const water = activities.find((activity) => activity.tenantId === activeTenantId && activity.name === 'water');
-  const running = activities.find((activity) => activity.tenantId === activeTenantId && activity.name === 'running');
-  const topActivityId = Object.entries(totals).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const activity = (water && (totals[water.id] || range === 'week') ? water : null)
-    || (running && totals[running.id] ? running : activities.find((item) => item.id === topActivityId))
-    || water
-    || running;
-  if (!activity) return null;
-
-  const assignment = assignments.find((item) => item.tenantId === activeTenantId && item.activityTypeId === activity.id && item.dailyGoal);
-  const dailyTarget = Number(assignment?.dailyGoal) || (activity.name === 'water' ? 2500 : activity.defaultIncrement) || 1;
-  const today = startOfDay(new Date());
-  const buckets = range === 'week'
-    ? Array.from({ length: 7 }).map((_, index) => {
-        const date = new Date(today);
-        date.setDate(today.getDate() - (6 - index));
-        return { key: date.toISOString().slice(0, 10), label: getShortDayLabel(date), start: date, end: new Date(date.getTime() + 86400000), target: dailyTarget };
-      })
-    : Array.from({ length: 4 }).map((_, index) => {
-        const start = new Date(today);
-        start.setDate(today.getDate() - ((3 - index) * 7 + 6));
-        const end = new Date(start);
-        end.setDate(start.getDate() + 7);
-        return { key: String(index), label: `${index + 1}. hf`, start, end, target: dailyTarget * 7 };
-      });
-  const values = buckets.map((bucket) => {
-    const total = logs
-      .filter((log) => log.activityTypeId === activity.id)
-      .filter((log) => {
-        const date = new Date(log.loggedAt);
-        return date >= bucket.start && date < bucket.end;
-      })
-      .reduce((sum, log) => sum + (Number(log.value) || 0), 0);
-    return { ...bucket, total, percent: Math.min(100, Math.round((total / bucket.target) * 100)) };
-  });
-  const maxValue = Math.max(...values.map((item) => item.total), dailyTarget, 1);
-  const total = values.reduce((sum, item) => sum + item.total, 0);
-  const targetTotal = values.reduce((sum, item) => sum + item.target, 0);
-  const totalPercent = Math.min(100, Math.round((total / targetTotal) * 100));
+function RangeTrendChart({ range, trend }) {
+  if (range === 'day' || !trend?.activity) return null;
+  const { activity, values, total, targetTotal, percent } = trend;
 
   return (
     <AppCard style={styles.chartCard}>
       <View style={styles.chartHeader}>
         <View>
           <Text style={styles.chartTitle}>{activity.displayNameTr} trendi</Text>
-          <Text style={styles.chartMeta}>{total}/{targetTotal} {activity.unit} · hedefin %{totalPercent}</Text>
+          <Text style={styles.chartMeta}>{total}/{targetTotal} {activity.unit} · hedefin %{percent}</Text>
         </View>
-        <Text style={[styles.chartBadge, totalPercent >= 100 && styles.chartBadgeDone]}>{range === 'week' ? '7 gün' : '4 hafta'}</Text>
+        <Text style={[styles.chartBadge, percent >= 100 && styles.chartBadgeDone]}>{range === 'week' ? '7 gün' : '4 hafta'}</Text>
       </View>
       <View style={styles.barRow}>
         {values.map((item) => {
-          const height = Math.max(8, Math.round((item.total / maxValue) * 96));
-          const isDone = item.total >= item.target;
           return (
             <View key={item.key} style={styles.barItem}>
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { height }, isDone && styles.barFillDone]} />
-                <View style={[styles.goalLine, { bottom: Math.min(92, Math.round((item.target / maxValue) * 96)) }]} />
+                <View style={[styles.barFill, { height: item.barHeight }, item.isComplete && styles.barFillDone]} />
+                <View style={[styles.goalLine, { bottom: item.goalBottom }]} />
               </View>
               <Text style={styles.barValue}>{item.total}</Text>
               <Text style={styles.barLabel}>{item.label}</Text>
