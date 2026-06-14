@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 type ConsoleShellProps = {
   title: string;
   subtitle: string;
-  active: 'platform' | 'sports-center';
+  active: 'platform' | 'sports-center' | 'users' | 'members' | 'staff';
   role: string;
   children: ReactNode;
 };
@@ -24,11 +24,11 @@ export function ConsoleShell({ title, subtitle, active, role, children }: Consol
           <span>Sports Centers</span>
           <span>Create / Edit Center</span>
           <span>Subscriptions</span>
-          <span>Users / Admins</span>
+          <Link className={active === 'users' ? 'active' : ''} href="/console/platform/users">Users / Admins</Link>
           <span>Join Requests</span>
           <span>NFC Cards</span>
-          <span>Members</span>
-          <span>Staff / Managers</span>
+          <Link className={active === 'members' ? 'active' : ''} href="/console/platform/members">Members</Link>
+          <Link className={active === 'staff' ? 'active' : ''} href="/console/platform/staff">Staff / Managers</Link>
           <span>Activities</span>
           <span>Activity History</span>
           <span>Audit Logs</span>
@@ -37,7 +37,7 @@ export function ConsoleShell({ title, subtitle, active, role, children }: Consol
         <div className="access-card">
           <strong>Access</strong>
           <span>{role}</span>
-          <small>Phase 1 mock data · isolated by console scope</small>
+          <small>Live Supabase data · server-side console scope</small>
         </div>
       </aside>
       <section className="console-main">
@@ -48,7 +48,7 @@ export function ConsoleShell({ title, subtitle, active, role, children }: Consol
             <p>{subtitle}</p>
           </div>
           <div className="header-actions">
-            <Link className="mini-button secondary" href="/test">NFC Test</Link>
+            <Link className="mini-button secondary" href="/test-links">NFC Test</Link>
             <Link className="mini-button" href={active === 'platform' ? '/console/sports-center' : '/console/platform'}>
               Switch Console
             </Link>

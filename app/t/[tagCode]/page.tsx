@@ -1,4 +1,5 @@
 import AutoOpenApp from './AutoOpenApp';
+import { getCurrentEnvironment, getNfcUrl } from '../../_lib/environment';
 
 type TagPageProps = {
   params: Promise<{ tagCode: string }>;
@@ -8,6 +9,8 @@ export default async function TagPage({ params }: TagPageProps) {
   const { tagCode } = await params;
   const decodedTagCode = decodeURIComponent(tagCode);
   const appSchemeUrl = `ritimapp://t/${encodeURIComponent(decodedTagCode)}`;
+  const environment = await getCurrentEnvironment();
+  const nfcUrl = getNfcUrl(decodedTagCode, environment);
 
   return (
     <main className="page">
@@ -27,6 +30,10 @@ export default async function TagPage({ params }: TagPageProps) {
             <code className="code">{decodedTagCode}</code>
           </div>
           <div className="card">
+            <div className="label">Environment NFC URL</div>
+            <code className="code">{nfcUrl}</code>
+          </div>
+          <div className="card">
             <div className="label">App fallback link</div>
             <code className="code">{appSchemeUrl}</code>
           </div>
@@ -34,7 +41,7 @@ export default async function TagPage({ params }: TagPageProps) {
 
         <div className="button-row">
           <a className="button" href={appSchemeUrl}>Open in RitimApp</a>
-          <a className="button secondary" href="/test">View test links</a>
+          <a className="button secondary" href="/test-links">View test links</a>
         </div>
       </section>
     </main>

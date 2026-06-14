@@ -1,157 +1,177 @@
-# RitimApp NFC Web Test Domain
+# RitimApp Web
 
-This is a minimal Next.js website for testing RitimApp NFC Universal Links and Android App Links on Vercel.
+Next.js web surface for RitimApp.
 
-It is not the main mobile app. It only provides:
+It serves:
 
-- A free HTTPS test domain on Vercel
-- Android App Links verification file
-- iOS Universal Links association file
-- Web fallback page for `/t/{tagCode}` NFC URLs
+- Public production landing page
+- NFC web fallback route `/t/{tagCode}`
+- Universal Links / Android App Links files
+- Platform and sports center console routes
+- Development test tools under `/test-links`
 
-## NFC URL format
+## Environments
 
-```text
-https://YOUR-VERCEL-DOMAIN/t/{tagCode}
-```
+RitimApp uses three web environments, but currently only two Supabase projects because the Supabase free plan does not allow a separate staging project.
 
-Example:
+| Environment | Branch | Domain | Vercel environment | Supabase project | Purpose |
+| --- | --- | --- | --- | --- | --- |
+| Development | `develop` | `dev.getritim.com` | Development | `ritim-dev` | Active development, Codex changes, NFC tests, test users, test sports centers, test cards |
+| Staging | `staging` | `staging.getritim.com` | Staging / Preview validation | `ritim-dev` | Release validation, demo flow testing, app link/universal link validation |
+| Production | `main` | `getritim.com`, `www.getritim.com` | Production | `ritim-prod` | Real users, real NFC cards, real sports centers, real subscriptions/payments |
 
-```text
-https://YOUR-VERCEL-DOMAIN/t/NFC_TEST_001
-```
+Feature branches should merge into `develop` first. Production deploys come from `main`.
 
-## Deploy to Vercel
+Production homepage is customer-facing. Developer/test links are available at `/test-links` and must not be promoted as public homepage content.
 
-1. Push this project to GitHub.
-2. Import the repository in Vercel.
-3. Deploy.
-4. Note your deployed domain, for example:
+## Supabase Strategy
 
-```text
-https://ritimapp-nfc-test.vercel.app
-```
+Current project mapping:
 
-## Required verification files
+- `ritim-dev` is shared by development and staging.
+- `ritim-prod` is only for production.
+- There is no separate staging Supabase project right now.
 
-After deployment, confirm these URLs return JSON directly:
+Critical rules:
 
-```text
-https://YOUR-VERCEL-DOMAIN/.well-known/assetlinks.json
-```
+- Do not create, reference, or require a separate staging Supabase project right now.
+- Never use production Supabase keys in development or staging.
+- Never use development Supabase keys in production.
+- Never commit real Supabase keys or real `.env` files.
+- All Supabase configuration must come from environment variables.
 
-```text
-https://YOUR-VERCEL-DOMAIN/.well-known/apple-app-site-association
-```
+A separate staging Supabase project may be added later if the Supabase plan is upgraded or pilot customers require stricter separation.
 
-## Android setup
+## Required Environment Variables
 
-Update:
+Required for every environment:
 
 ```text
-public/.well-known/assetlinks.json
+NEXT_PUBLIC_ENVIRONMENT=production|staging|development
+NEXT_PUBLIC_APP_URL=https://getritim.com
+NEXT_PUBLIC_DEEPLINK_DOMAIN=getritim.com
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-Replace:
+Console protection in production:
 
 ```text
-REPLACE_WITH_ANDROID_SHA256_CERT_FINGERPRINT
+CONSOLE_BASIC_AUTH_USER=admin
+CONSOLE_BASIC_AUTH_PASSWORD=change-me
 ```
 
-with your real Android app signing certificate SHA256 fingerprint.
-
-The package name currently used is:
+Native app association:
 
 ```text
-com.ritimapp.mobile
+NEXT_PUBLIC_ANDROID_PACKAGE_NAME=com.ritimapp.mobile
+NEXT_PUBLIC_ANDROID_SHA256_CERT_FINGERPRINTS=AA:...
+NEXT_PUBLIC_IOS_APP_ID=TEAMID.com.ritimapp.mobile
 ```
 
-## iOS setup
+See `.env.example`. Do not commit real `.env` files.
 
-Update:
+## Vercel Variable Mapping
+
+Development:
 
 ```text
-public/.well-known/apple-app-site-association
+NEXT_PUBLIC_ENVIRONMENT=development
+NEXT_PUBLIC_APP_URL=https://dev.getritim.com
+NEXT_PUBLIC_DEEPLINK_DOMAIN=dev.getritim.com
+NEXT_PUBLIC_SUPABASE_URL=<ritim-dev-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-dev-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<ritim-dev-service-role-key>
 ```
 
-Replace:
+Staging:
 
 ```text
-REPLACE_WITH_APPLE_TEAM_ID.com.ritimapp.mobile
+NEXT_PUBLIC_ENVIRONMENT=staging
+NEXT_PUBLIC_APP_URL=https://staging.getritim.com
+NEXT_PUBLIC_DEEPLINK_DOMAIN=staging.getritim.com
+NEXT_PUBLIC_SUPABASE_URL=<ritim-dev-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-dev-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<ritim-dev-service-role-key>
 ```
 
-with your real Apple Team ID and bundle ID.
-
-Example:
+Production:
 
 ```text
-ABCDE12345.com.ritimapp.mobile
+NEXT_PUBLIC_ENVIRONMENT=production
+NEXT_PUBLIC_APP_URL=https://getritim.com
+NEXT_PUBLIC_DEEPLINK_DOMAIN=getritim.com
+NEXT_PUBLIC_SUPABASE_URL=<ritim-prod-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-prod-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<ritim-prod-service-role-key>
 ```
 
-## Expo config example
+## NFC URL Format
 
-Use your real Vercel domain in the config below.
-
-```json
-{
-  "expo": {
-    "scheme": "ritimapp",
-    "ios": {
-      "bundleIdentifier": "com.ritimapp.mobile",
-      "associatedDomains": [
-        "applinks:YOUR-VERCEL-DOMAIN"
-      ]
-    },
-    "android": {
-      "package": "com.ritimapp.mobile",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "YOUR-VERCEL-DOMAIN",
-              "pathPrefix": "/t"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
-    }
-  }
-}
-```
-
-## NFC card writing
-
-Write this URL to the NFC card as an NDEF URI record:
+NFC links must be generated from `NEXT_PUBLIC_DEEPLINK_DOMAIN`.
 
 ```text
-https://YOUR-VERCEL-DOMAIN/t/NFC_TEST_001
+https://{domain}/t/{tagCode}
 ```
 
-The card should not contain user ID, exercise ID, shortcut details, or secret data.
+Examples:
 
-## Test plan
+```text
+https://dev.getritim.com/t/NFC_TEST_001
+https://staging.getritim.com/t/NFC_TEST_001
+https://getritim.com/t/NFC_REAL_001
+```
 
-1. Deploy website to Vercel.
-2. Confirm these URLs work:
-   - `https://YOUR-VERCEL-DOMAIN/.well-known/assetlinks.json`
-   - `https://YOUR-VERCEL-DOMAIN/.well-known/apple-app-site-association`
-3. Build/install the React Native app using EAS/dev build, not Expo Go.
-4. Open:
-   - `https://YOUR-VERCEL-DOMAIN/t/NFC_TEST_001`
-5. Confirm the app opens and receives `tagCode`.
-6. Write the same URL to an NFC tag:
-   - `https://YOUR-VERCEL-DOMAIN/t/NFC_TEST_001`
-7. Scan NFC tag while online.
-8. Confirm RitimApp opens and receives the `tagCode`.
-9. Turn off internet after the domain association has already been verified.
-10. Scan the same NFC tag again.
-11. Confirm RitimApp opens and saves the event locally with `syncStatus = pending`.
+Production NFC tags must never be written with dev or staging domains.
 
-## Local development
+The NFC card should contain only the public tag URL. It should not contain user ID, exercise ID, shortcut details, or secret data.
+
+## Verification Files
+
+Keep these routes working in all environments:
+
+```text
+/.well-known/assetlinks.json
+/.well-known/apple-app-site-association
+/t/[tagCode]
+```
+
+Confirm these return JSON:
+
+```text
+https://getritim.com/.well-known/assetlinks.json
+https://getritim.com/.well-known/apple-app-site-association
+```
+
+The same paths are available on dev and staging domains. If Apple or Android association values differ by environment, configure them with environment variables:
+
+```text
+NEXT_PUBLIC_ANDROID_PACKAGE_NAME
+NEXT_PUBLIC_ANDROID_SHA256_CERT_FINGERPRINTS
+NEXT_PUBLIC_IOS_APP_ID
+```
+
+## Console Routes
+
+These routes remain available:
+
+```text
+/console
+/console/platform
+/console/sports-center
+/sports-center-console
+```
+
+In production, console routes are protected by authentication. They must not be promoted as public homepage content.
+
+## Non-Production Badge
+
+- `NEXT_PUBLIC_ENVIRONMENT=development` shows a small `DEV` badge.
+- `NEXT_PUBLIC_ENVIRONMENT=staging` shows a small `STAGING` badge.
+- Production shows no badge.
+
+## Local Development
 
 ```bash
 npm install
@@ -162,4 +182,10 @@ Open:
 
 ```text
 http://localhost:3000
+```
+
+Test NFC/universal links:
+
+```text
+http://localhost:3000/test-links
 ```
