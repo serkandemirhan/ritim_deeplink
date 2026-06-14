@@ -29,6 +29,8 @@ export default function HomePage() {
 
         <div className="button-row">
           <a className="button" href="/test">Open test links</a>
+          <a className="button" href="/console/platform">Platform Console</a>
+          <a className="button" href="/console/sports-center">Sports Center Console</a>
           <a className="button secondary" href="/.well-known/assetlinks.json">Android assetlinks.json</a>
           <a className="button secondary" href="/.well-known/apple-app-site-association">iOS association</a>
         </div>
