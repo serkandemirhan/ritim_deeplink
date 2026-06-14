@@ -3,15 +3,18 @@ import {
   activityLogs,
   auditLogs,
   formatDate,
+  getPlatformUsers,
   getSubscription,
   isNearLimit,
   joinRequests,
   joinSourceLabels,
   nfcCards,
-  platformUsers,
   sportsCenters,
   subscriptions,
 } from '../_data/mockConsoleData';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const todayKey = '2026-06-14';
 
@@ -22,7 +25,9 @@ function statusTone(status: string): 'green' | 'blue' | 'orange' | 'red' {
   return 'red';
 }
 
-export default function PlatformConsolePage() {
+export default async function PlatformConsolePage() {
+  const platformUsersResult = await getPlatformUsers();
+  const platformUsers = platformUsersResult.users;
   const activeCenters = sportsCenters.filter((center) => center.status === 'active').length;
   const trialCenters = sportsCenters.filter((center) => center.status === 'trialing').length;
   const pausedCenters = sportsCenters.filter((center) => center.status === 'paused').length;
@@ -120,7 +125,7 @@ export default function PlatformConsolePage() {
         <MetricCard label="Join requests" value={pendingRequests.length} detail="Pending platform-wide approval" tone="orange" />
         <MetricCard label="Near member limit" value={centersNearMemberLimit.length} detail="Usage >= 80%" tone="orange" />
         <MetricCard label="Near NFC limit" value={centersNearNfcLimit.length} detail="Usage >= 80%" tone="orange" />
-        <MetricCard label="All users" value={platformUsers.length} detail={`${platformAdmins} platform · ${sportsCenterConsoleUsers} center staff`} tone="green" />
+        <MetricCard label="All users" value={platformUsers.length} detail={`${platformAdmins} platform · ${sportsCenterConsoleUsers} center staff · ${platformUsersResult.source}`} tone="green" />
         <MetricCard label="Personal Pro users" value={personalProUsers} detail={`${pendingUsers} invited or pending users`} tone="purple" />
       </div>
 
@@ -191,6 +196,12 @@ export default function PlatformConsolePage() {
 
         <div className="span-12">
           <Section title="Users / Admins" description="All known Ritim users across personal accounts, platform roles and sports center memberships.">
+            {platformUsersResult.error ? (
+              <div className="alert-item">
+                <strong>Live user data fallback</strong>
+                <p>{platformUsersResult.error} Showing mock users until Vercel has Supabase service credentials.</p>
+              </div>
+            ) : null}
             <DataTable
               columns={['User', 'Email', 'Platform Role', 'Sports Center', 'Center Role', 'Status', 'Personal Plan', 'Join Source', 'Last Seen', 'Actions']}
               rows={platformUsers.map((user) => {
@@ -200,7 +211,7 @@ export default function PlatformConsolePage() {
                   <strong key={`${user.id}-name`}>{user.fullName}</strong>,
                   user.email,
                   <Badge key={`${user.id}-platform-role`} tone={isPlatformAdmin ? 'purple' : 'default'}>{user.platformRole}</Badge>,
-                  center?.name ?? 'Personal',
+                  user.sportsCenterName ?? center?.name ?? 'Personal',
                   user.sportsCenterRole ? <Badge key={`${user.id}-center-role`} tone={user.sportsCenterRole === 'owner' ? 'purple' : user.sportsCenterRole === 'admin' ? 'blue' : user.sportsCenterRole === 'coach' ? 'green' : 'default'}>{user.sportsCenterRole}</Badge> : '-',
                   <Badge key={`${user.id}-status`} tone={user.status === 'active' ? 'green' : user.status === 'pending' || user.status === 'invited' ? 'orange' : 'red'}>{user.status}</Badge>,
                   <Badge key={`${user.id}-plan`} tone={user.personalPlan === 'personal_pro' ? 'purple' : 'blue'}>{user.personalPlan}</Badge>,

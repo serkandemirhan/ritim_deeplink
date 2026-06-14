@@ -88,12 +88,19 @@ export type PlatformUser = {
   email: string;
   platformRole: PlatformRole;
   sportsCenterId?: string | null;
+  sportsCenterName?: string | null;
   sportsCenterRole?: StaffRole | null;
   status: JoinStatus;
   personalPlan: PlanCode;
   joinSource?: JoinSource | null;
   lastSeenAt: string;
   createdAt: string;
+};
+
+export type PlatformUsersResult = {
+  users: PlatformUser[];
+  source: 'supabase' | 'mock';
+  error?: string;
 };
 
 export type AuditLog = {
@@ -183,6 +190,117 @@ export const platformUsers: PlatformUser[] = [
   { id: 'personal-free-1', fullName: 'Deniz Yilmaz', email: 'deniz@example.com', platformRole: 'user', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'free', joinSource: null, lastSeenAt: '2026-06-14 06:20', createdAt: '2026-06-01' },
   { id: 'personal-pro-android-1', fullName: 'Ece Kaya', email: 'ece@example.com', platformRole: 'user', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'personal_pro', joinSource: null, lastSeenAt: '2026-06-14 07:05', createdAt: '2026-06-04' },
 ];
+
+type SupabaseProfile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type SupabaseTenantMember = {
+  tenant_id: string;
+  user_id: string;
+  role: 'tenant_owner' | 'tenant_admin' | 'trainer' | 'member';
+  created_at: string | null;
+};
+
+type SupabaseTenant = {
+  id: string;
+  name: string;
+};
+
+async function fetchSupabaseTable<T>(path: string, url: string, key: string): Promise<T[]> {
+  const response = await fetch(`${url.replace(/\/$/, '')}/rest/v1/${path}`, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase ${path} failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<T[]>;
+}
+
+function mapTenantRole(role: SupabaseTenantMember['role']): StaffRole {
+  if (role === 'tenant_owner') return 'owner';
+  if (role === 'tenant_admin') return 'admin';
+  if (role === 'trainer') return 'coach';
+  return 'member';
+}
+
+export async function getPlatformUsers(): Promise<PlatformUsersResult> {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    return { users: platformUsers, source: 'mock', error: 'Supabase env is not configured for the web console.' };
+  }
+
+  try {
+    const [profiles, memberships, tenants] = await Promise.all([
+      fetchSupabaseTable<SupabaseProfile>('profiles?select=id,full_name,email,created_at,updated_at&order=created_at.desc', url, key),
+      fetchSupabaseTable<SupabaseTenantMember>('tenant_members?select=tenant_id,user_id,role,created_at', url, key),
+      fetchSupabaseTable<SupabaseTenant>('tenants?select=id,name', url, key),
+    ]);
+
+    const tenantsById = new Map(tenants.map((tenant) => [tenant.id, tenant]));
+    const membershipsByUserId = new Map<string, SupabaseTenantMember[]>();
+    memberships.forEach((membership) => {
+      const existing = membershipsByUserId.get(membership.user_id) ?? [];
+      existing.push(membership);
+      membershipsByUserId.set(membership.user_id, existing);
+    });
+
+    const users: PlatformUser[] = profiles.flatMap((profile): PlatformUser[] => {
+      const userMemberships = membershipsByUserId.get(profile.id) ?? [];
+      if (userMemberships.length === 0) {
+        return [{
+          id: profile.id,
+          fullName: profile.full_name ?? 'Unnamed user',
+          email: profile.email ?? '-',
+          platformRole: 'user' as const,
+          sportsCenterId: null,
+          sportsCenterName: null,
+          sportsCenterRole: null,
+          status: 'active' as const,
+          personalPlan: 'free' as const,
+          joinSource: null,
+          lastSeenAt: profile.updated_at ?? profile.created_at ?? '-',
+          createdAt: profile.created_at ?? '-',
+        }];
+      }
+
+      return userMemberships.map((membership) => ({
+        id: `${profile.id}-${membership.tenant_id}`,
+        fullName: profile.full_name ?? 'Unnamed user',
+        email: profile.email ?? '-',
+        platformRole: 'user' as const,
+        sportsCenterId: membership.tenant_id,
+        sportsCenterName: tenantsById.get(membership.tenant_id)?.name ?? null,
+        sportsCenterRole: mapTenantRole(membership.role),
+        status: 'active' as const,
+        personalPlan: 'free' as const,
+        joinSource: 'manual_admin' as const,
+        lastSeenAt: profile.updated_at ?? profile.created_at ?? '-',
+        createdAt: membership.created_at ?? profile.created_at ?? '-',
+      }));
+    });
+
+    return { users, source: 'supabase' };
+  } catch (error) {
+    return {
+      users: platformUsers,
+      source: 'mock',
+      error: error instanceof Error ? error.message : 'Supabase users could not be loaded.',
+    };
+  }
+}
 
 export const auditLogs: AuditLog[] = [
   { id: 'audit-1', createdAt: '2026-06-14 09:44', actor: 'platform_admin@ritim.app', action: 'Member approved', entity: 'Lyon Fit Club', details: 'Approved QR join request for Aylin Martin' },
