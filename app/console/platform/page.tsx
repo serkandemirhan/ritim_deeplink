@@ -8,6 +8,7 @@ import {
   joinRequests,
   joinSourceLabels,
   nfcCards,
+  platformUsers,
   sportsCenters,
   subscriptions,
 } from '../_data/mockConsoleData';
@@ -29,6 +30,10 @@ export default function PlatformConsolePage() {
   const totalNfcCards = sportsCenters.reduce((sum, center) => sum + center.nfcCardsCount, 0);
   const pendingRequests = joinRequests.filter((request) => request.status === 'pending');
   const scannedToday = nfcCards.filter((card) => card.lastScannedAt?.startsWith(todayKey)).length;
+  const platformAdmins = platformUsers.filter((user) => user.platformRole !== 'user').length;
+  const sportsCenterConsoleUsers = platformUsers.filter((user) => user.sportsCenterRole && user.sportsCenterRole !== 'member').length;
+  const personalProUsers = platformUsers.filter((user) => user.personalPlan === 'personal_pro').length;
+  const pendingUsers = platformUsers.filter((user) => user.status === 'pending' || user.status === 'invited').length;
 
   const centersNearLimits = sportsCenters.filter((center) => {
     const subscription = getSubscription(center.id);
@@ -115,6 +120,8 @@ export default function PlatformConsolePage() {
         <MetricCard label="Join requests" value={pendingRequests.length} detail="Pending platform-wide approval" tone="orange" />
         <MetricCard label="Near member limit" value={centersNearMemberLimit.length} detail="Usage >= 80%" tone="orange" />
         <MetricCard label="Near NFC limit" value={centersNearNfcLimit.length} detail="Usage >= 80%" tone="orange" />
+        <MetricCard label="All users" value={platformUsers.length} detail={`${platformAdmins} platform · ${sportsCenterConsoleUsers} center staff`} tone="green" />
+        <MetricCard label="Personal Pro users" value={personalProUsers} detail={`${pendingUsers} invited or pending users`} tone="purple" />
       </div>
 
       <div className="console-grid">
@@ -179,6 +186,30 @@ export default function PlatformConsolePage() {
                 </button>
               ))}
             </div>
+          </Section>
+        </div>
+
+        <div className="span-12">
+          <Section title="Users / Admins" description="All known Ritim users across personal accounts, platform roles and sports center memberships.">
+            <DataTable
+              columns={['User', 'Email', 'Platform Role', 'Sports Center', 'Center Role', 'Status', 'Personal Plan', 'Join Source', 'Last Seen', 'Actions']}
+              rows={platformUsers.map((user) => {
+                const center = sportsCenters.find((item) => item.id === user.sportsCenterId);
+                const isPlatformAdmin = user.platformRole !== 'user';
+                return [
+                  <strong key={`${user.id}-name`}>{user.fullName}</strong>,
+                  user.email,
+                  <Badge key={`${user.id}-platform-role`} tone={isPlatformAdmin ? 'purple' : 'default'}>{user.platformRole}</Badge>,
+                  center?.name ?? 'Personal',
+                  user.sportsCenterRole ? <Badge key={`${user.id}-center-role`} tone={user.sportsCenterRole === 'owner' ? 'purple' : user.sportsCenterRole === 'admin' ? 'blue' : user.sportsCenterRole === 'coach' ? 'green' : 'default'}>{user.sportsCenterRole}</Badge> : '-',
+                  <Badge key={`${user.id}-status`} tone={user.status === 'active' ? 'green' : user.status === 'pending' || user.status === 'invited' ? 'orange' : 'red'}>{user.status}</Badge>,
+                  <Badge key={`${user.id}-plan`} tone={user.personalPlan === 'personal_pro' ? 'purple' : 'blue'}>{user.personalPlan}</Badge>,
+                  user.joinSource ? joinSourceLabels[user.joinSource] : '-',
+                  user.lastSeenAt,
+                  <ActionRow key={`${user.id}-actions`} actions={isPlatformAdmin ? ['View', 'Change role', 'Audit'] : ['View', 'Open memberships', 'Support']} />,
+                ];
+              })}
+            />
           </Section>
         </div>
 

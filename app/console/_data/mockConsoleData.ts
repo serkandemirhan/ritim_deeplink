@@ -3,6 +3,7 @@ export type JoinSource = 'qr_code' | 'nfc_card' | 'invite_link' | 'email_invite'
 export type SubscriptionStatus = 'trialing' | 'active' | 'paused' | 'cancelled' | 'expired';
 export type SportsCenterStatus = SubscriptionStatus;
 export type StaffRole = 'owner' | 'admin' | 'coach' | 'member';
+export type PlatformRole = 'platform_super_admin' | 'platform_admin' | 'support' | 'user';
 export type PlanCode = 'free' | 'personal_pro' | 'sports_center_basic';
 export type PaymentProvider = 'manual' | 'stripe' | 'apple_iap' | 'google_play';
 
@@ -81,6 +82,20 @@ export type StaffMember = {
   lastLoginAt: string;
 };
 
+export type PlatformUser = {
+  id: string;
+  fullName: string;
+  email: string;
+  platformRole: PlatformRole;
+  sportsCenterId?: string | null;
+  sportsCenterRole?: StaffRole | null;
+  status: JoinStatus;
+  personalPlan: PlanCode;
+  joinSource?: JoinSource | null;
+  lastSeenAt: string;
+  createdAt: string;
+};
+
 export type AuditLog = {
   id: string;
   createdAt: string;
@@ -149,6 +164,24 @@ export const staffMembers: StaffMember[] = [
   { id: 'staff-1', sportsCenterId: 'sc-lyon-fit', name: 'Claire Dubois', email: 'owner@lyonfit.fr', role: 'owner', status: 'active', lastLoginAt: '2026-06-14 09:10' },
   { id: 'staff-2', sportsCenterId: 'sc-lyon-fit', name: 'Yanis Petit', email: 'coach@lyonfit.fr', role: 'coach', status: 'active', lastLoginAt: '2026-06-13 18:42' },
   { id: 'staff-3', sportsCenterId: 'sc-lyon-fit', name: 'Emma Roche', email: 'admin@lyonfit.fr', role: 'admin', status: 'active', lastLoginAt: '2026-06-14 08:15' },
+];
+
+export const platformUsers: PlatformUser[] = [
+  { id: 'platform-super-1', fullName: 'Serkan Demirhan', email: 'serkan@ritim.app', platformRole: 'platform_super_admin', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'personal_pro', joinSource: null, lastSeenAt: '2026-06-14 10:12', createdAt: '2026-05-01' },
+  { id: 'platform-admin-1', fullName: 'Ritim Ops', email: 'platform_admin@ritim.app', platformRole: 'platform_admin', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'free', joinSource: null, lastSeenAt: '2026-06-14 09:44', createdAt: '2026-05-06' },
+  { id: 'support-1', fullName: 'Support Team', email: 'support@ritim.app', platformRole: 'support', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'free', joinSource: null, lastSeenAt: '2026-06-13 17:10', createdAt: '2026-05-10' },
+  { id: 'owner-lyon', fullName: 'Claire Dubois', email: 'owner@lyonfit.fr', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'owner', status: 'active', personalPlan: 'personal_pro', joinSource: 'manual_admin', lastSeenAt: '2026-06-14 09:10', createdAt: '2026-06-01' },
+  { id: 'admin-lyon', fullName: 'Emma Roche', email: 'admin@lyonfit.fr', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'admin', status: 'active', personalPlan: 'free', joinSource: 'email_invite', lastSeenAt: '2026-06-14 08:15', createdAt: '2026-06-01' },
+  { id: 'coach-lyon', fullName: 'Yanis Petit', email: 'coach@lyonfit.fr', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'coach', status: 'active', personalPlan: 'free', joinSource: 'email_invite', lastSeenAt: '2026-06-13 18:42', createdAt: '2026-06-02' },
+  { id: 'member-alex', fullName: 'Alex Durand', email: 'alex@example.com', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'member', status: 'active', personalPlan: 'personal_pro', joinSource: 'qr_code', lastSeenAt: '2026-06-14 09:40', createdAt: '2026-06-03' },
+  { id: 'member-aylin', fullName: 'Aylin Martin', email: 'aylin@example.com', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'member', status: 'pending', personalPlan: 'free', joinSource: 'qr_code', lastSeenAt: '2026-06-13 11:22', createdAt: '2026-06-13' },
+  { id: 'member-hugo', fullName: 'Hugo Bernard', email: 'hugo@example.com', platformRole: 'user', sportsCenterId: 'sc-lyon-fit', sportsCenterRole: 'member', status: 'pending', personalPlan: 'free', joinSource: 'nfc_card', lastSeenAt: '2026-06-12 17:40', createdAt: '2026-06-12' },
+  { id: 'owner-marseille', fullName: 'Nora Petit', email: 'admin@marseillecore.fr', platformRole: 'user', sportsCenterId: 'sc-marseille-core', sportsCenterRole: 'owner', status: 'active', personalPlan: 'free', joinSource: 'manual_admin', lastSeenAt: '2026-06-14 08:10', createdAt: '2026-06-10' },
+  { id: 'member-lina', fullName: 'Lina Moreau', email: 'lina@example.com', platformRole: 'user', sportsCenterId: 'sc-paris-well', sportsCenterRole: 'member', status: 'pending', personalPlan: 'personal_pro', joinSource: 'club_code', lastSeenAt: '2026-06-14 07:55', createdAt: '2026-06-10' },
+  { id: 'member-mert', fullName: 'Mert Kaya', email: 'mert@example.com', platformRole: 'user', sportsCenterId: 'sc-paris-well', sportsCenterRole: 'member', status: 'pending', personalPlan: 'free', joinSource: 'invite_link', lastSeenAt: '2026-06-06 15:30', createdAt: '2026-06-06' },
+  { id: 'member-selin', fullName: 'Selin Arslan', email: 'selin@example.com', platformRole: 'user', sportsCenterId: 'sc-lille-box', sportsCenterRole: 'member', status: 'invited', personalPlan: 'free', joinSource: 'manual_admin', lastSeenAt: '2026-06-13 21:15', createdAt: '2026-06-11' },
+  { id: 'personal-free-1', fullName: 'Deniz Yilmaz', email: 'deniz@example.com', platformRole: 'user', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'free', joinSource: null, lastSeenAt: '2026-06-14 06:20', createdAt: '2026-06-01' },
+  { id: 'personal-pro-android-1', fullName: 'Ece Kaya', email: 'ece@example.com', platformRole: 'user', sportsCenterId: null, sportsCenterRole: null, status: 'active', personalPlan: 'personal_pro', joinSource: null, lastSeenAt: '2026-06-14 07:05', createdAt: '2026-06-04' },
 ];
 
 export const auditLogs: AuditLog[] = [
