@@ -55,6 +55,22 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
+The console also supports environment-specific Supabase variable aliases. Prefer these in Vercel when one project serves multiple branches:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL_DEV=https://your-dev-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY_DEV=your-dev-anon-key
+SUPABASE_SERVICE_ROLE_KEY_DEV=your-dev-service-role-key
+
+NEXT_PUBLIC_SUPABASE_URL_STAGING=https://your-staging-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGING=your-staging-anon-key
+SUPABASE_SERVICE_ROLE_KEY_STAGING=your-staging-service-role-key
+
+NEXT_PUBLIC_SUPABASE_URL_PROD=https://your-prod-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD=your-prod-anon-key
+SUPABASE_SERVICE_ROLE_KEY_PROD=your-prod-service-role-key
+```
+
 Console protection in production:
 
 ```text
@@ -80,9 +96,9 @@ Development:
 NEXT_PUBLIC_ENVIRONMENT=development
 NEXT_PUBLIC_APP_URL=https://dev.getritim.com
 NEXT_PUBLIC_DEEPLINK_DOMAIN=dev.getritim.com
-NEXT_PUBLIC_SUPABASE_URL=<ritim-dev-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-dev-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<ritim-dev-service-role-key>
+NEXT_PUBLIC_SUPABASE_URL_DEV=<ritim-dev-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY_DEV=<ritim-dev-anon-key>
+SUPABASE_SERVICE_ROLE_KEY_DEV=<ritim-dev-service-role-key>
 ```
 
 Staging:
@@ -91,9 +107,9 @@ Staging:
 NEXT_PUBLIC_ENVIRONMENT=staging
 NEXT_PUBLIC_APP_URL=https://staging.getritim.com
 NEXT_PUBLIC_DEEPLINK_DOMAIN=staging.getritim.com
-NEXT_PUBLIC_SUPABASE_URL=<ritim-dev-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-dev-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<ritim-dev-service-role-key>
+NEXT_PUBLIC_SUPABASE_URL_STAGING=<ritim-staging-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGING=<ritim-staging-anon-key>
+SUPABASE_SERVICE_ROLE_KEY_STAGING=<ritim-staging-service-role-key>
 ```
 
 Production:
@@ -102,9 +118,9 @@ Production:
 NEXT_PUBLIC_ENVIRONMENT=production
 NEXT_PUBLIC_APP_URL=https://getritim.com
 NEXT_PUBLIC_DEEPLINK_DOMAIN=getritim.com
-NEXT_PUBLIC_SUPABASE_URL=<ritim-prod-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<ritim-prod-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<ritim-prod-service-role-key>
+NEXT_PUBLIC_SUPABASE_URL_PROD=<ritim-prod-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD=<ritim-prod-anon-key>
+SUPABASE_SERVICE_ROLE_KEY_PROD=<ritim-prod-service-role-key>
 ```
 
 ## NFC URL Format

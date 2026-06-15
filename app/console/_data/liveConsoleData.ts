@@ -41,15 +41,61 @@ export type LiveConsoleUsersResult = {
   error?: string;
 };
 
+type RuntimeEnvironment = 'development' | 'staging' | 'production';
+
+function normalizeEnvironment(value?: string | null): RuntimeEnvironment {
+  if (value === 'production' || value === 'prod') return 'production';
+  if (value === 'staging') return 'staging';
+  return 'development';
+}
+
+function isPlaceholder(value?: string | null) {
+  const normalized = String(value ?? '').trim();
+  return !normalized || /^<[^>]+>$/.test(normalized) || normalized.includes('your-project.supabase.co') || normalized.includes('your-');
+}
+
+function firstConfigured(...values: Array<string | undefined>) {
+  return values.find((value) => !isPlaceholder(value))?.trim();
+}
+
+function getEnvironmentSuffixes(environment: RuntimeEnvironment) {
+  if (environment === 'production') return ['PRODUCTION', 'PROD'];
+  if (environment === 'staging') return ['STAGING'];
+  return ['DEVELOPMENT', 'DEV'];
+}
+
 function getText(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function getSupabaseConfig() {
-  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const restKey = serviceRoleKey ?? process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-  return { url: url?.replace(/\/$/, ''), restKey, serviceRoleKey };
+  const environment = normalizeEnvironment(process.env.NEXT_PUBLIC_ENVIRONMENT ?? process.env.VERCEL_ENV);
+  const [primarySuffix, secondarySuffix] = getEnvironmentSuffixes(environment);
+  const url = firstConfigured(
+    process.env[`SUPABASE_URL_${primarySuffix}`],
+    secondarySuffix ? process.env[`SUPABASE_URL_${secondarySuffix}`] : undefined,
+    process.env[`NEXT_PUBLIC_SUPABASE_URL_${primarySuffix}`],
+    secondarySuffix ? process.env[`NEXT_PUBLIC_SUPABASE_URL_${secondarySuffix}`] : undefined,
+    process.env.SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.EXPO_PUBLIC_SUPABASE_URL
+  );
+  const serviceRoleKey = firstConfigured(
+    process.env[`SUPABASE_SERVICE_ROLE_KEY_${primarySuffix}`],
+    secondarySuffix ? process.env[`SUPABASE_SERVICE_ROLE_KEY_${secondarySuffix}`] : undefined,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  const restKey = firstConfigured(
+    serviceRoleKey,
+    process.env[`SUPABASE_ANON_KEY_${primarySuffix}`],
+    secondarySuffix ? process.env[`SUPABASE_ANON_KEY_${secondarySuffix}`] : undefined,
+    process.env[`NEXT_PUBLIC_SUPABASE_ANON_KEY_${primarySuffix}`],
+    secondarySuffix ? process.env[`NEXT_PUBLIC_SUPABASE_ANON_KEY_${secondarySuffix}`] : undefined,
+    process.env.SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+  );
+  return { environment, url: url?.replace(/\/$/, ''), restKey, serviceRoleKey };
 }
 
 async function fetchSupabaseTable<T>(path: string, url: string, key: string): Promise<T[]> {
@@ -152,13 +198,13 @@ function buildPlatformUser({
 }
 
 export async function getLivePlatformUsers(): Promise<LiveConsoleUsersResult> {
-  const { url, restKey, serviceRoleKey } = getSupabaseConfig();
+  const { environment, url, restKey, serviceRoleKey } = getSupabaseConfig();
 
   if (!url || !restKey) {
     return {
       users: [],
       source: 'supabase',
-      error: 'Supabase env eksik. Vercel için NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY tanımlanmalı.',
+      error: `${environment} Supabase env eksik veya placeholder. Vercel için gerçek NEXT_PUBLIC_SUPABASE_URL_${environment === 'production' ? 'PROD' : environment === 'staging' ? 'STAGING' : 'DEV'} ve SUPABASE_SERVICE_ROLE_KEY_${environment === 'production' ? 'PROD' : environment === 'staging' ? 'STAGING' : 'DEV'} değerlerini tanımla.`,
     };
   }
 
@@ -166,7 +212,7 @@ export async function getLivePlatformUsers(): Promise<LiveConsoleUsersResult> {
     return {
       users: [],
       source: 'supabase',
-      error: 'Tüm kullanıcıları göstermek için SUPABASE_SERVICE_ROLE_KEY gerekli. Anon key auth.users listesini okuyamaz.',
+      error: `${environment} ortamında tüm kullanıcıları göstermek için gerçek SUPABASE_SERVICE_ROLE_KEY gerekli. Anon key auth.users listesini okuyamaz.`,
     };
   }
 
