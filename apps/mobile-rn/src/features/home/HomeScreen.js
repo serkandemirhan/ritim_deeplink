@@ -33,6 +33,17 @@ const RANGE_OPTIONS = [
   { key: 'month', label: 'Ay' },
 ];
 const OVERDRIVE_LABELS = ['ATEŞ MODU', 'HEDEF AŞILDI', 'RİTİM YÜKSELİYOR'];
+const DEFAULT_DASHBOARD_NAMES = ['push_ups', 'water', 'coffee', 'walking', 'pull_ups'];
+const PRIORITY_CARD_FALLBACKS = [
+  { name: 'push_ups', displayNameTr: 'Şınav', unit: 'reps', total: 60, target: 110, percent: 55, defaultIncrement: 10, category: 'fitness' },
+  { name: 'walking', displayNameTr: 'Yürüyüş', unit: 'min', total: 40, target: 30, percent: 100, defaultIncrement: 10, category: 'fitness' },
+  { name: 'pull_ups', displayNameTr: 'Pull-up', unit: 'reps', total: 10, target: 15, percent: 67, defaultIncrement: 5, category: 'fitness' },
+];
+const WELLNESS_CARD_FALLBACKS = [
+  { name: 'water', displayNameTr: 'Su', unit: 'ml', total: 500, target: 2500, percent: 20, defaultIncrement: 500, category: 'wellness' },
+  { name: 'coffee', displayNameTr: 'Kahve', unit: 'cup', total: 1, target: 3, percent: 33, defaultIncrement: 1, category: 'wellness' },
+  { name: 'meditation', displayNameTr: 'Meditasyon', unit: 'min', total: 10, target: 20, percent: 50, defaultIncrement: 10, category: 'wellness' },
+];
 const HOME_MENU_ITEMS = [
   { label: 'NFC Kartlarım', route: 'cards', description: 'Kartlarını ve okutma miktarlarını yönet' },
   { label: 'Geçmiş', route: 'history', description: 'NFC ve manuel kayıtlarını incele' },
@@ -102,6 +113,42 @@ function getRelativeTimeLabel(dateValue) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} sa önce`;
   return `${Math.floor(hours / 24)} gün önce`;
+}
+
+function startOfLocalDay(dateValue = new Date()) {
+  const date = new Date(dateValue);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function isWithinRange(dateValue, range) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const todayStart = startOfLocalDay();
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+  if (range === 'day') return date >= todayStart && date < tomorrowStart;
+
+  const start = new Date(todayStart);
+  start.setDate(start.getDate() - (range === 'month' ? 29 : 6));
+  return date >= start && date < tomorrowStart;
+}
+
+function goalPercent(total, target) {
+  const targetValue = Number(target) || 0;
+  if (!targetValue) return 0;
+  return Math.max(0, Math.round(((Number(total) || 0) / targetValue) * 100));
+}
+
+function getActivityStatusMessage({ rawPercent = 0, extra = 0, activity, unit }) {
+  const unitLabelText = displayUnit(unit || activity?.unit || '');
+  if (rawPercent < 50) return 'Başlamak için iyi bir an.';
+  if (rawPercent < 80) return 'Ritmin oluşuyor, devam et.';
+  if (rawPercent < 100) return 'Hedefe çok yaklaştın.';
+  if (rawPercent < 150) return 'Hedef tamamlandı, harika iş.';
+  return `Ateştesin! Hedefi aştın.${extra > 0 ? ` +${extra} ${unitLabelText} fazla` : ''}`;
 }
 
 function EnergyProgress({ percent, toneColor, overdrive, pulseAnim }) {
