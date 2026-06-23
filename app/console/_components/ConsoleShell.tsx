@@ -12,6 +12,7 @@ type ConsoleActiveKey =
   | 'join-requests'
   | 'nfc-cards'
   | 'rhythms'
+  | 'assignments'
   | 'activity-logs'
   | 'subscriptions'
   | 'reports'
@@ -52,18 +53,23 @@ type SidebarItem = {
 const navItems: SidebarItem[] = [
   { label: 'Platform Console', href: '/console/platform', active: 'platform', scope: 'platform' },
   { label: 'Sports Center Console', href: '/console/sports-center', active: 'sports-center', scope: 'sports-center' },
-  { label: 'Organizations', active: 'organizations', scope: 'platform' },
-  { label: 'Subscriptions', active: 'subscriptions', scope: 'platform' },
+  { label: 'Organizations', href: '/console/platform/organizations', active: 'organizations', scope: 'platform' },
+  { label: 'Subscriptions', href: '/console/platform/subscriptions', active: 'subscriptions', scope: 'platform' },
   { label: 'Users / Admins', href: '/console/platform/users', active: 'users', scope: 'platform' },
   { label: 'Members', href: '/console/platform/members', active: 'members', scope: 'platform' },
   { label: 'Staff / Managers', href: '/console/platform/staff', active: 'staff', scope: 'platform' },
-  { label: 'Join Requests', active: 'join-requests', scope: 'sports-center' },
-  { label: 'NFC Cards', active: 'nfc-cards', scope: 'sports-center' },
-  { label: 'Rhythms', active: 'rhythms', scope: 'sports-center' },
-  { label: 'Activity Logs', active: 'activity-logs', scope: 'sports-center' },
-  { label: 'Reports', active: 'reports', scope: 'all' },
-  { label: 'Audit Logs', active: 'audit-logs', scope: 'platform' },
-  { label: 'Settings', active: 'settings', scope: 'all' },
+  { label: 'Join Requests', href: '/console/sports-center/join-requests', active: 'join-requests', scope: 'sports-center' },
+  { label: 'Center Members', href: '/console/sports-center/members', active: 'members', scope: 'sports-center' },
+  { label: 'NFC Cards', href: '/console/sports-center/nfc-cards', active: 'nfc-cards', scope: 'sports-center' },
+  { label: 'Rhythms', href: '/console/sports-center/rhythms', active: 'rhythms', scope: 'sports-center' },
+  { label: 'Assignments', href: '/console/sports-center/assignments', active: 'assignments', scope: 'sports-center' },
+  { label: 'Activity Logs', href: '/console/sports-center/activity-logs', active: 'activity-logs', scope: 'sports-center' },
+  { label: 'Subscription Usage', href: '/console/sports-center/subscription', active: 'subscriptions', scope: 'sports-center' },
+  { label: 'Reports', href: '/console/platform/reports', active: 'reports', scope: 'platform' },
+  { label: 'Audit Logs', href: '/console/platform/audit-logs', active: 'audit-logs', scope: 'platform' },
+  { label: 'Center Reports', href: '/console/sports-center/reports', active: 'reports', scope: 'sports-center' },
+  { label: 'System Settings', href: '/console/platform/settings', active: 'settings', scope: 'platform' },
+  { label: 'Settings', href: '/console/sports-center/settings', active: 'settings', scope: 'sports-center' },
 ];
 
 export function ConsoleShell({ title, subtitle, active, role, sessionRole = 'super_admin', actions, children }: ConsoleShellProps) {

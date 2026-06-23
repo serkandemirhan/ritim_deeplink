@@ -135,57 +135,124 @@ Middleware kontrolu:
 
 ## 5. Data Access Katmani
 
-- [ ] Mock data ve live data ayrimini temizle: live query fonksiyonlari tek klasorde toplansin.
-- [ ] Organization list/detail queryleri yaz.
-- [ ] Wellness Admin/staff queryleri yaz.
-- [ ] Member list/detail queryleri yaz.
-- [ ] Join request query ve mutationlari yaz.
-- [ ] NFC card list/detail/create/update/assign query ve mutationlari yaz.
-- [ ] Rhythm/template list/detail/create/update/assign query ve mutationlari yaz.
-- [ ] Activity library query ve mutationlari yaz.
-- [ ] Activity log ve progress queryleri yaz.
-- [ ] Subscription plan ve organization subscription queryleri yaz.
-- [ ] Audit log write helper ekle.
-- [ ] Her mutation icin audit log olustur.
+- [x] Mock data ve live data ayrimini temizle: live query fonksiyonlari tek klasorde toplansin.
+- [x] Organization list/detail queryleri yaz.
+- [x] Wellness Admin/staff queryleri yaz.
+- [x] Member list/detail queryleri yaz.
+- [x] Join request query ve mutationlari yaz.
+- [x] NFC card list/detail/create/update/assign query ve mutationlari yaz.
+- [x] Rhythm/template list/detail/create/update/assign query ve mutationlari yaz.
+- [x] Activity library query ve mutationlari yaz.
+- [x] Activity log ve progress queryleri yaz.
+- [x] Subscription plan ve organization subscription queryleri yaz.
+- [x] Audit log write helper ekle.
+- [x] Her mutation icin audit log olustur.
+
+### 5. Kontrol Notlari
+
+- Server-only Supabase access helper eklendi: `app/console/_data/supabaseServer.ts`.
+- Console repository eklendi: `app/console/_data/consoleRepository.ts`.
+- Repository queryleri: organizations, users, members, staff, join requests, NFC cards, rhythms, activity library, activity logs, subscription plans, organization subscriptions, audit logs.
+- Repository mutation helperlari: join request create/review, NFC card create/update/assign, rhythm create/update, activity library item create, audit log write.
+- `mockConsoleData.ts` artik live kullanici okumasini repository uzerinden dener; Supabase env veya tablo eksikse mock fallback korunur.
+- `liveConsoleData.ts` duplicate Supabase REST/Auth kodu tasimiyor; compatibility wrapper olarak `listConsoleUsers()` kullaniyor.
+- Not: Eksik console tablolari migration uygulanana kadar repository ilgili listelerde bos sonuc + error dondurebilir. Task 6 live dashboard baglarken bu error/empty state okunmali.
+- Repository mutationlari basarili write sonrasi `writeAuditLog()` cagiriyor. Sonraki UI form/action katmanlari bu helperlari kullanmali; dogrudan Supabase write yapilmamali.
+- `npx tsc --noEmit` basarili.
 
 ## 6. Phase 1 - Core Admin Foundation
 
-- [ ] `/console` girisini role gore yonlendir: Super Admin -> `/console/platform`, Wellness Admin -> `/console/sports-center`.
-- [ ] Super Admin dashboard KPI kartlarini live data ile bagla.
-- [ ] Wellness Admin dashboard KPI kartlarini organization-scoped live data ile bagla.
-- [ ] Organizations page olustur: liste, search, status/plan filter, pagination.
-- [ ] Organization create/edit formu olustur.
-- [ ] Organization detail page olustur: basic info, subscription, admins, members, cards, rhythms, usage, audit.
-- [ ] Members page olustur: role scope'a gore global veya organization-scoped.
-- [ ] NFC Cards page olustur: role scope'a gore global veya organization-scoped.
-- [ ] Basic permission testleri ekle.
+- [x] `/console` girisini role gore yonlendir: Super Admin -> `/console/platform`, Wellness Admin -> `/console/sports-center`.
+- [x] Super Admin dashboard KPI kartlarini live data ile bagla.
+- [x] Wellness Admin dashboard KPI kartlarini organization-scoped live data ile bagla.
+- [x] Organizations page olustur: liste, search, status/plan filter, pagination.
+- [x] Organization create/edit formu olustur.
+- [x] Organization detail page olustur: basic info, subscription, admins, members, cards, rhythms, usage, audit.
+- [x] Members page olustur: role scope'a gore global veya organization-scoped.
+- [x] NFC Cards page olustur: role scope'a gore global veya organization-scoped.
+- [x] Basic permission testleri ekle.
+
+### 6. Kontrol Notlari
+
+- `/console` role-based redirect daha once eklenen permission katmani uzerinden calisiyor.
+- Dashboard live snapshot helper eklendi: `app/console/_data/consoleDashboardData.ts`.
+- Platform dashboard KPI kartlari repository verisini okuyor; Supabase env/tablo eksikse mock fallback ve hata mesaji gosteriyor.
+- Sports-center dashboard KPI kartlari organization-scoped repository verisini okuyor; fallback davranisi platform ile ayni.
+- Sidebar `Organizations` item'i `/console/platform/organizations` route'una baglandi.
+- Organizations liste sayfasi eklendi: search, status filter, plan filter, server-side pagination, usage bars.
+- Organization create/edit formlari eklendi: `/console/platform/organizations/new`, `/console/platform/organizations/[organizationId]/edit`.
+- Organization detail sayfasi eklendi: `/console/platform/organizations/[organizationId]`.
+- Detail sayfasi basic info, subscription/usage, admins/staff, members, cards, rhythms/library, activity logs ve audit bolumlerini gosteriyor.
+- Sports-center scoped members sayfasi eklendi: `/console/sports-center/members`.
+- Sports-center scoped NFC cards sayfasi eklendi: `/console/sports-center/nfc-cards`.
+- Permission rules server-only dosyadan ayrildi: `app/console/_auth/permissionRules.ts`.
+- Basic permission matrix static TypeScript fixture olarak eklendi: `app/console/_auth/permissionRules.static-test.ts`. Projede runtime test runner olmadigi icin su an `tsc` kapsaminda derleniyor.
+- `npx tsc --noEmit` basarili.
 
 ## 7. Phase 2 - Operational Management
 
-- [ ] Join Requests page olustur.
-- [ ] Join request approve/reject mutationlarini yaz.
-- [ ] Approve sonrasi organization member kaydi olustur.
-- [ ] Reject sonrasi kullanicinin personal user olarak kalmasini garanti et.
-- [ ] Rhythm templates page olustur.
-- [ ] Rhythm template create/edit/archive formlari ekle.
-- [ ] Member rhythm assignment akisini ekle.
-- [ ] NFC card assignment akisini ekle: member, rhythm, default amount, unit.
-- [ ] Card scan history sayfasini organization scope ile ekle.
-- [ ] Member progress page/detail ekle.
-- [ ] Organization settings page ekle.
-- [ ] Subscription limit kontrolunu member/card creation oncesi uygula.
+- [x] Join Requests page olustur.
+- [x] Join request approve/reject mutationlarini yaz.
+- [x] Approve sonrasi organization member kaydi olustur.
+- [x] Reject sonrasi kullanicinin personal user olarak kalmasini garanti et.
+- [x] Rhythm templates page olustur.
+- [x] Rhythm template create/edit/archive formlari ekle.
+- [x] Member rhythm assignment akisini ekle.
+- [x] NFC card assignment akisini ekle: member, rhythm, default amount, unit.
+- [x] Card scan history sayfasini organization scope ile ekle.
+- [x] Member progress page/detail ekle.
+- [x] Organization settings page ekle.
+- [x] Subscription limit kontrolunu member/card creation oncesi uygula.
+
+### 7. Kontrol Notlari
+
+- Join request queue eklendi: `/console/sports-center/join-requests`.
+- Approve/reject server actionlari `reviewJoinRequest()` uzerinden calisiyor.
+- Approve akisi once organization member limitini kontrol ediyor, sonra `tenant_members` icinde active member kaydi olusturuyor.
+- Reject akisi sadece join request status'unu `rejected` yapiyor; personal user veya tenant member kaydi olusturmuyor.
+- Rhythm templates sayfasi eklendi: `/console/sports-center/rhythms`.
+- Rhythm template create/edit/archive akislari eklendi: `/console/sports-center/rhythms/[rhythmId]/edit`.
+- Member rhythm assignment ekrani eklendi: `/console/sports-center/assignments`.
+- Member rhythm assignment su an dedicated assignment tablosu olmadigi icin audit-backed operational intent olarak kaydediliyor.
+- NFC card assignment ayni ekranda gercek `card_assignments` insert'i kullaniyor.
+- Card scan/activity history sayfasi eklendi: `/console/sports-center/activity-logs`.
+- Member progress detail route'u eklendi: `/console/sports-center/members/[memberId]`.
+- Organization settings sayfasi eklendi: `/console/sports-center/settings`.
+- Settings save su an `organization_settings` migration'i olmadigi icin audit-backed operational intent olarak kaydediliyor.
+- Subscription/plan limit kontrolu member approval ve NFC card creation oncesinde repository seviyesinde yapiliyor.
+- `npx tsc --noEmit` basarili.
 
 ## 8. Phase 3 - Business Management
 
-- [ ] Subscription plans page olustur.
-- [ ] Super Admin icin plan create/edit/activate/deactivate ekle.
-- [ ] Organization subscription assignment/override akisini ekle.
-- [ ] Wellness Admin icin read-only subscription usage page ekle.
-- [ ] Reports pages ekle: platform reports ve organization reports.
-- [ ] CSV export ekle: members, NFC cards, activity logs, reports.
-- [ ] Audit logs page ekle: Super Admin all, Wellness Admin own organization.
-- [ ] System settings page ekle.
-- [ ] Organization settings mutationlari icin audit log ekle.
+- [x] Subscription plans page olustur.
+- [x] Super Admin icin plan create/edit/activate/deactivate ekle.
+- [x] Organization subscription assignment/override akisini ekle.
+- [x] Wellness Admin icin read-only subscription usage page ekle.
+- [x] Reports pages ekle: platform reports ve organization reports.
+- [x] CSV export ekle: members, NFC cards, activity logs, reports.
+- [x] Audit logs page ekle: Super Admin all, Wellness Admin own organization.
+- [x] System settings page ekle.
+- [x] Organization settings mutationlari icin audit log ekle.
+
+### 8. Kontrol Notlari
+
+- Platform subscription management sayfasi eklendi: `/console/platform/subscriptions`.
+- Subscription plan create ve activate/deactivate/archive actionlari repository uzerinden audit log yazarak calisiyor.
+- Organization subscription assignment/override akisi `organization_subscriptions` insert'i kullaniyor.
+- Wellness Admin read-only subscription usage sayfasi eklendi: `/console/sports-center/subscription`.
+- Platform reports sayfasi eklendi: `/console/platform/reports`.
+- Organization reports sayfasi eklendi: `/console/sports-center/reports`.
+- CSV export route'lari eklendi:
+  - `/console/platform/reports/export/[dataset]`
+  - `/console/sports-center/reports/export/[dataset]`
+- Export datasetleri: members, nfc-cards, activity-logs; platform ayrica organizations export eder.
+- Platform audit logs sayfasi eklendi: `/console/platform/audit-logs`.
+- System settings sayfasi eklendi: `/console/platform/settings`.
+- System settings migration dosyasi eklendi: `apps/mobile-rn/supabase/console_settings.sql`.
+- System settings artik `system_settings` tablosundan `id=global` satirini okuyor ve save sirasinda insert/update yapiyor.
+- Organization settings mutationlari Task 7'de `/console/sports-center/settings` icinde audit-backed operational intent olarak eklendi.
+- System settings save islemi basarili write sonrasi audit log yazar.
+- `npx tsc --noEmit` basarili.
 
 ## 9. Phase 4 - Advanced
 

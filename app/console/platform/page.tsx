@@ -1,11 +1,11 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section, UsageBar } from '../_components/ConsoleShell';
 import { requireSuperAdmin } from '../_auth/permissions';
+import { getPlatformDashboardData } from '../_data/consoleDashboardData';
 import {
   activityLogs,
   auditLogs,
   formatDate,
   getPlatformUsers,
-  getSubscription,
   isNearLimit,
   joinRequests,
   joinSourceLabels,
@@ -17,8 +17,6 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const todayKey = '2026-06-14';
-
 function statusTone(status: string): 'green' | 'blue' | 'orange' | 'red' {
   if (status === 'active') return 'green';
   if (status === 'trialing') return 'blue';
@@ -28,32 +26,27 @@ function statusTone(status: string): 'green' | 'blue' | 'orange' | 'red' {
 
 export default async function PlatformConsolePage() {
   const session = await requireSuperAdmin();
+  const dashboardData = await getPlatformDashboardData();
   const platformUsersResult = await getPlatformUsers();
   const platformUsers = platformUsersResult.users;
-  const activeCenters = sportsCenters.filter((center) => center.status === 'active').length;
-  const trialCenters = sportsCenters.filter((center) => center.status === 'trialing').length;
-  const pausedCenters = sportsCenters.filter((center) => center.status === 'paused').length;
-  const totalMembers = sportsCenters.reduce((sum, center) => sum + center.membersCount, 0);
-  const totalNfcCards = sportsCenters.reduce((sum, center) => sum + center.nfcCardsCount, 0);
+  const centerSummaries = dashboardData.organizations;
+  const activeCenters = centerSummaries.filter((center) => center.status === 'active').length;
+  const trialCenters = centerSummaries.filter((center) => center.status === 'trialing').length;
+  const pausedCenters = centerSummaries.filter((center) => center.status === 'paused' || center.status === 'suspended').length;
+  const totalMembers = centerSummaries.reduce((sum, center) => sum + center.membersCount, 0);
+  const totalNfcCards = centerSummaries.reduce((sum, center) => sum + center.nfcCardsCount, 0);
   const pendingRequests = joinRequests.filter((request) => request.status === 'pending');
-  const scannedToday = nfcCards.filter((card) => card.lastScannedAt?.startsWith(todayKey)).length;
-  const platformAdmins = platformUsers.filter((user) => user.platformRole !== 'user').length;
-  const sportsCenterConsoleUsers = platformUsers.filter((user) => user.sportsCenterRole && user.sportsCenterRole !== 'member').length;
-  const personalProUsers = platformUsers.filter((user) => user.personalPlan === 'personal_pro').length;
-  const pendingUsers = platformUsers.filter((user) => user.status === 'pending' || user.status === 'invited').length;
+  const scannedToday = dashboardData.scannedTodayCount;
+  const platformAdmins = dashboardData.platformAdminsCount;
+  const sportsCenterConsoleUsers = dashboardData.staffCount;
+  const personalProUsers = dashboardData.personalProUsersCount;
+  const pendingUsers = dashboardData.pendingUsersCount;
 
-  const centersNearLimits = sportsCenters.filter((center) => {
-    const subscription = getSubscription(center.id);
-    return isNearLimit(center.membersCount, subscription?.maxMembers ?? null) || isNearLimit(center.nfcCardsCount, subscription?.maxNfcCards ?? null);
+  const centersNearLimits = centerSummaries.filter((center) => {
+    return isNearLimit(center.membersCount, center.maxMembers) || isNearLimit(center.nfcCardsCount, center.maxNfcCards);
   });
-  const centersNearMemberLimit = sportsCenters.filter((center) => {
-    const subscription = getSubscription(center.id);
-    return isNearLimit(center.membersCount, subscription?.maxMembers ?? null);
-  });
-  const centersNearNfcLimit = sportsCenters.filter((center) => {
-    const subscription = getSubscription(center.id);
-    return isNearLimit(center.nfcCardsCount, subscription?.maxNfcCards ?? null);
-  });
+  const centersNearMemberLimit = centerSummaries.filter((center) => isNearLimit(center.membersCount, center.maxMembers));
+  const centersNearNfcLimit = centerSummaries.filter((center) => isNearLimit(center.nfcCardsCount, center.maxNfcCards));
 
   const sourceRows = Object.entries(joinSourceLabels).map(([source, label]) => {
     const requests = joinRequests.filter((request) => request.source === source);
@@ -84,10 +77,9 @@ export default async function PlatformConsolePage() {
 
   const alertItems = [
     ...centersNearLimits.map((center) => {
-      const subscription = getSubscription(center.id);
       return {
         title: `${center.name} limit uyarısı`,
-        text: `Members ${center.membersCount}/${subscription?.maxMembers ?? '-'} · NFC ${center.nfcCardsCount}/${subscription?.maxNfcCards ?? '-'}`,
+        text: `Members ${center.membersCount}/${center.maxMembers ?? '-'} · NFC ${center.nfcCardsCount}/${center.maxNfcCards ?? '-'}`,
       };
     }),
     ...pendingRequests
@@ -119,38 +111,41 @@ export default async function PlatformConsolePage() {
       subtitle="Ritim ekibinin tüm spor merkezlerini, abonelikleri, NFC kapasitesini ve onboarding kuyruğunu yönettiği merkezi panel."
     >
       <div className="metrics-grid">
-        <MetricCard label="Total sports centers" value={sportsCenters.length} detail={`${activeCenters} active · ${trialCenters} trialing · ${pausedCenters} paused`} />
+        <MetricCard label="Total sports centers" value={centerSummaries.length} detail={`${activeCenters} active · ${trialCenters} trialing · ${pausedCenters} paused · ${dashboardData.source}`} />
         <MetricCard label="Active sports centers" value={activeCenters} detail="Web console enabled centers" tone="green" />
         <MetricCard label="Trial sports centers" value={trialCenters} detail="Manual pilot or trialing status" tone="blue" />
         <MetricCard label="Paused / cancelled" value={pausedCenters} detail="Needs platform attention" tone="orange" />
         <MetricCard label="Members managed" value={totalMembers} detail="All sports centers combined" tone="blue" />
         <MetricCard label="NFC cards issued" value={totalNfcCards} detail={`${scannedToday} card scanned today`} tone="purple" />
-        <MetricCard label="Join requests" value={pendingRequests.length} detail="Pending platform-wide approval" tone="orange" />
+        <MetricCard label="Join requests" value={dashboardData.pendingJoinRequestsCount} detail="Pending platform-wide approval" tone="orange" />
         <MetricCard label="Near member limit" value={centersNearMemberLimit.length} detail="Usage >= 80%" tone="orange" />
         <MetricCard label="Near NFC limit" value={centersNearNfcLimit.length} detail="Usage >= 80%" tone="orange" />
-        <MetricCard label="All users" value={platformUsers.length} detail={`${platformAdmins} platform · ${sportsCenterConsoleUsers} center staff · ${platformUsersResult.source}`} tone="green" />
+        <MetricCard label="All users" value={dashboardData.usersCount} detail={`${platformAdmins} platform · ${sportsCenterConsoleUsers} center staff · ${platformUsersResult.source}`} tone="green" />
         <MetricCard label="Personal Pro users" value={personalProUsers} detail={`${pendingUsers} invited or pending users`} tone="purple" />
       </div>
 
       <div className="console-grid">
         <div className="span-12">
           <Section title="Sports Centers" description="Global tenant list with owner, subscription, usage limits and latest activity.">
+            {dashboardData.error ? (
+              <div className="alert-item">
+                <strong>Live dashboard fallback</strong>
+                <p>{dashboardData.error} Showing available fallback data until Supabase console tables are ready.</p>
+              </div>
+            ) : null}
             <DataTable
               columns={['Center', 'Owner', 'Plan', 'Status', 'Members', 'NFC Cards', 'Created', 'Last Activity', 'Actions']}
-              rows={sportsCenters.map((center) => {
-                const subscription = getSubscription(center.id);
-                return [
+              rows={centerSummaries.map((center) => [
                   <strong key={`${center.id}-name`}>{center.name}</strong>,
-                  center.ownerEmail,
-                  subscription?.planCode ?? center.planCode,
+                  center.contactEmail,
+                  center.planCode,
                   <Badge key={`${center.id}-status`} tone={statusTone(center.status)}>{center.status}</Badge>,
-                  <UsageBar key={`${center.id}-members`} label="Members" current={center.membersCount} max={subscription?.maxMembers ?? null} />,
-                  <UsageBar key={`${center.id}-cards`} label="NFC" current={center.nfcCardsCount} max={subscription?.maxNfcCards ?? null} />,
+                  <UsageBar key={`${center.id}-members`} label="Members" current={center.membersCount} max={center.maxMembers} />,
+                  <UsageBar key={`${center.id}-cards`} label="NFC" current={center.nfcCardsCount} max={center.maxNfcCards} />,
                   center.createdAt,
                   formatDate(center.lastActivityAt),
                   <ActionRow key={`${center.id}-actions`} actions={['View', 'Edit', 'Change Status', 'Open Subscription']} />,
-                ];
-              })}
+                ])}
             />
           </Section>
         </div>
@@ -231,17 +226,14 @@ export default async function PlatformConsolePage() {
           <Section title="Subscription Limits" description="Centers close to members or NFC limits.">
             <DataTable
               columns={['Center', 'Members', 'NFC Cards', 'Plan', 'Status', 'Action']}
-              rows={centersNearLimits.map((center) => {
-                const subscription = getSubscription(center.id);
-                return [
+              rows={centersNearLimits.map((center) => [
                   center.name,
-                  <UsageBar key={`${center.id}-limit-members`} label="Members" current={center.membersCount} max={subscription?.maxMembers ?? null} />,
-                  <UsageBar key={`${center.id}-limit-cards`} label="NFC" current={center.nfcCardsCount} max={subscription?.maxNfcCards ?? null} />,
-                  subscription?.planCode ?? center.planCode,
+                  <UsageBar key={`${center.id}-limit-members`} label="Members" current={center.membersCount} max={center.maxMembers} />,
+                  <UsageBar key={`${center.id}-limit-cards`} label="NFC" current={center.nfcCardsCount} max={center.maxNfcCards} />,
+                  center.planCode,
                   <Badge key={`${center.id}-risk`} tone="orange">{center.status}</Badge>,
                   <ActionRow key={`${center.id}-limit-actions`} actions={['Upgrade', 'Contact owner']} />,
-                ];
-              })}
+                ])}
             />
           </Section>
         </div>

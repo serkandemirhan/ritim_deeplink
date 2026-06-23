@@ -3,9 +3,27 @@ import 'server-only';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { environmentFromHost } from '../../_lib/environmentCore';
-import type { ConsoleId, OrganizationRole, PlatformRole } from '../_types/domain';
+import type { ConsoleId } from '../_types/domain';
+import {
+  canAccessPlatformConsole,
+  canAccessSportsCenterConsole,
+  canManageOrganization,
+  isPlatformRole,
+  isSuperAdminRole,
+  isWellnessAdminRole,
+  normalizeConsoleRole,
+  type ConsoleSessionRole,
+} from './permissionRules';
 
-export type ConsoleSessionRole = PlatformRole | OrganizationRole;
+export {
+  canAccessPlatformConsole,
+  canAccessSportsCenterConsole,
+  canManageOrganization,
+  isPlatformRole,
+  isSuperAdminRole,
+  isWellnessAdminRole,
+};
+export type { ConsoleSessionRole };
 
 export type ConsoleSession = {
   userId: ConsoleId;
@@ -15,44 +33,8 @@ export type ConsoleSession = {
   source: 'development_fallback' | 'basic_auth' | 'header_override';
 };
 
-const PLATFORM_ROLES: ConsoleSessionRole[] = ['super_admin', 'platform_admin', 'support'];
-const ORGANIZATION_ROLES: ConsoleSessionRole[] = ['wellness_admin', 'staff', 'trainer', 'member'];
-
-function normalizeRole(value?: string | null): ConsoleSessionRole {
-  if (value === 'platform_super_admin') return 'super_admin';
-  if (value && [...PLATFORM_ROLES, ...ORGANIZATION_ROLES].includes(value as ConsoleSessionRole)) {
-    return value as ConsoleSessionRole;
-  }
-  return 'super_admin';
-}
-
 function canUseHeaderOverride(host?: string | null) {
   return environmentFromHost(host) !== 'production';
-}
-
-export function isPlatformRole(role: ConsoleSessionRole) {
-  return PLATFORM_ROLES.includes(role);
-}
-
-export function isSuperAdminRole(role: ConsoleSessionRole) {
-  return role === 'super_admin';
-}
-
-export function isWellnessAdminRole(role: ConsoleSessionRole) {
-  return role === 'wellness_admin';
-}
-
-export function canAccessPlatformConsole(session: ConsoleSession) {
-  return session.role === 'super_admin' || session.role === 'platform_admin' || session.role === 'support';
-}
-
-export function canAccessSportsCenterConsole(session: ConsoleSession) {
-  return canAccessPlatformConsole(session) || session.role === 'wellness_admin' || session.role === 'staff' || session.role === 'trainer';
-}
-
-export function canManageOrganization(session: ConsoleSession, organizationId: ConsoleId) {
-  if (canAccessPlatformConsole(session)) return true;
-  return Boolean(session.organizationId && session.organizationId === organizationId && session.role === 'wellness_admin');
 }
 
 export async function getConsoleSession(): Promise<ConsoleSession> {
@@ -60,7 +42,7 @@ export async function getConsoleSession(): Promise<ConsoleSession> {
   const host = headerList.get('host');
   const environment = environmentFromHost(host);
   const headerRole = canUseHeaderOverride(host) ? headerList.get('x-ritim-console-role') : null;
-  const role = normalizeRole(headerRole ?? process.env.CONSOLE_DEV_ROLE);
+  const role = normalizeConsoleRole(headerRole ?? process.env.CONSOLE_DEV_ROLE);
   const organizationId = process.env.CONSOLE_DEV_ORGANIZATION_ID ?? 'sc-lyon-fit';
   const basicAuthUser = process.env.CONSOLE_BASIC_AUTH_USER;
 

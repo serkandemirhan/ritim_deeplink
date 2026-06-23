@@ -1,9 +1,9 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section, UsageBar } from '../_components/ConsoleShell';
 import { requireOrganizationAccess } from '../_auth/permissions';
+import { getOrganizationDashboardData } from '../_data/consoleDashboardData';
 import {
   activityLogs,
   formatDate,
-  getSubscription,
   joinRequests,
   joinSourceLabels,
   nfcCards,
@@ -13,7 +13,6 @@ import {
 
 const todayKey = '2026-06-14';
 const center = sportsCenters.find((item) => item.id === 'sc-lyon-fit') ?? sportsCenters[0];
-const subscription = getSubscription(center.id);
 
 function requestTone(status: string): 'default' | 'green' | 'blue' | 'orange' {
   if (status === 'active') return 'green';
@@ -30,6 +29,8 @@ function cardTone(status: string): 'green' | 'orange' | 'red' {
 
 export default async function SportsCenterConsolePage() {
   const session = await requireOrganizationAccess(center.id);
+  const dashboardData = await getOrganizationDashboardData(center.id);
+  const centerSummary = dashboardData.organization;
   const centerRequests = joinRequests.filter((request) => request.sportsCenterId === center.id);
   const pendingRequests = centerRequests.filter((request) => request.status === 'pending');
   const centerCards = nfcCards.filter((card) => card.sportsCenterId === center.id);
@@ -38,11 +39,11 @@ export default async function SportsCenterConsolePage() {
   const centerStaff = staffMembers.filter((staff) => staff.sportsCenterId === center.id);
   const assignedCards = centerCards.filter((card) => card.status === 'assigned');
   const unassignedCards = centerCards.filter((card) => card.status === 'unassigned');
-  const nearMemberLimit = subscription?.maxMembers ? center.membersCount / subscription.maxMembers >= 0.8 : false;
-  const nearCardLimit = subscription?.maxNfcCards ? center.nfcCardsCount / subscription.maxNfcCards >= 0.8 : false;
+  const nearMemberLimit = centerSummary.maxMembers ? centerSummary.membersCount / centerSummary.maxMembers >= 0.8 : false;
+  const nearCardLimit = centerSummary.maxNfcCards ? centerSummary.nfcCardsCount / centerSummary.maxNfcCards >= 0.8 : false;
   const uniqueActiveMembers = new Set(todayLogs.map((log) => log.member)).size;
   const inactiveMembers = 7;
-  const activitiesToday = 214;
+  const activitiesToday = dashboardData.todayActivityLogsCount;
 
   const onboardingActions = [
     { title: 'Generate QR Code', text: `Public check-in token: ${center.clubCode}-QR` },
@@ -54,10 +55,10 @@ export default async function SportsCenterConsolePage() {
   ];
 
   const alertItems = [
-    ...(nearMemberLimit ? [{ title: 'Member limit near', text: `${center.membersCount}/${subscription?.maxMembers} members used. Approve requests carefully or upgrade plan.` }] : []),
-    ...(nearCardLimit ? [{ title: 'NFC card limit near', text: `${center.nfcCardsCount}/${subscription?.maxNfcCards} cards used. Order cleanup or upgrade before issuing more.` }] : []),
-    ...(pendingRequests.length > 0 ? [{ title: 'Join approvals waiting', text: `${pendingRequests.length} member request needs approve/reject action.` }] : []),
-    ...(unassignedCards.length > 0 ? [{ title: 'Unassigned NFC cards', text: `${unassignedCards.length} card is not linked to a member or activity.` }] : []),
+    ...(nearMemberLimit ? [{ title: 'Member limit near', text: `${centerSummary.membersCount}/${centerSummary.maxMembers} members used. Approve requests carefully or upgrade plan.` }] : []),
+    ...(nearCardLimit ? [{ title: 'NFC card limit near', text: `${centerSummary.nfcCardsCount}/${centerSummary.maxNfcCards} cards used. Order cleanup or upgrade before issuing more.` }] : []),
+    ...(dashboardData.pendingJoinRequestsCount > 0 ? [{ title: 'Join approvals waiting', text: `${dashboardData.pendingJoinRequestsCount} member request needs approve/reject action.` }] : []),
+    ...(dashboardData.unassignedCardsCount > 0 ? [{ title: 'Unassigned NFC cards', text: `${dashboardData.unassignedCardsCount} card is not linked to a member or activity.` }] : []),
   ];
 
   return (
@@ -65,19 +66,25 @@ export default async function SportsCenterConsolePage() {
       active="sports-center"
       role="Sports center owner/admin/coach"
       sessionRole={session.role}
-      title={`${center.name} Console`}
+      title={`${centerSummary.name} Console`}
       subtitle="Salon ekibinin kendi üyelerini, katılım taleplerini, NFC kartlarını, personelini ve günlük operasyonunu yönettiği panel."
     >
       <div className="metrics-grid">
-        <MetricCard label="Members usage" value={`${center.membersCount} / ${subscription?.maxMembers ?? '-'}`} detail="Sports Center Basic member capacity" />
-        <MetricCard label="NFC cards usage" value={`${center.nfcCardsCount} / ${subscription?.maxNfcCards ?? '-'}`} detail="Sports center card capacity" tone="purple" />
-        <MetricCard label="Pending joins" value={pendingRequests.length} detail="Approve, reject or view profile" tone="orange" />
-        <MetricCard label="Activities today" value={activitiesToday} detail={`${todayLogs.length} shown in latest logs`} tone="blue" />
-        <MetricCard label="Active members this week" value={29} detail={`${uniqueActiveMembers} active in sample today`} tone="green" />
+        <MetricCard label="Members usage" value={`${centerSummary.membersCount} / ${centerSummary.maxMembers ?? '-'}`} detail={`${dashboardData.source} member capacity`} />
+        <MetricCard label="NFC cards usage" value={`${centerSummary.nfcCardsCount} / ${centerSummary.maxNfcCards ?? '-'}`} detail="Sports center card capacity" tone="purple" />
+        <MetricCard label="Pending joins" value={dashboardData.pendingJoinRequestsCount} detail="Approve, reject or view profile" tone="orange" />
+        <MetricCard label="Activities today" value={activitiesToday} detail={`${dashboardData.activityLogsCount} total logs loaded`} tone="blue" />
+        <MetricCard label="Active members" value={dashboardData.activeMembersCount} detail={`${uniqueActiveMembers} active in sample today`} tone="green" />
         <MetricCard label="Inactive members" value={inactiveMembers} detail="Needs coach follow-up" tone="orange" />
-        <MetricCard label="Unassigned NFC cards" value={unassignedCards.length} detail={`${assignedCards.length} assigned in sample inventory`} tone="orange" />
-        <MetricCard label="Current plan" value="Sports Center Basic" detail={`${subscription?.provider ?? 'manual'} · ${subscription?.status ?? 'active'}`} tone="purple" />
+        <MetricCard label="Unassigned NFC cards" value={dashboardData.unassignedCardsCount} detail={`${dashboardData.assignedCardsCount || assignedCards.length} assigned`} tone="orange" />
+        <MetricCard label="Current plan" value={centerSummary.planCode} detail={`${centerSummary.subscriptionProvider} · ${centerSummary.subscriptionStatus}`} tone="purple" />
       </div>
+      {dashboardData.error ? (
+        <div className="alert-item">
+          <strong>Live sports-center fallback</strong>
+          <p>{dashboardData.error} Showing available fallback data until Supabase console tables are ready.</p>
+        </div>
+      ) : null}
 
       <div className="console-grid">
         <div className="span-8">
@@ -97,7 +104,7 @@ export default async function SportsCenterConsolePage() {
                 <ActionRow key={`${request.id}-actions`} actions={['Approve', 'Reject', 'View User']} />,
               ])}
             />
-            {(center.membersCount >= (subscription?.maxMembers ?? Number.POSITIVE_INFINITY)) ? (
+            {(centerSummary.membersCount >= (centerSummary.maxMembers ?? Number.POSITIVE_INFINITY)) ? (
               <div className="alert-item">
                 <strong>Approval blocked</strong>
                 <p>Your Sports Center Basic plan supports up to 50 members. Contact Ritim to increase your limit.</p>
@@ -114,11 +121,11 @@ export default async function SportsCenterConsolePage() {
         <div className="span-4">
           <Section title="Limit Usage" description="Current plan controls members and NFC capacity.">
             <div className="alert-list">
-              <UsageBar label="Members" current={center.membersCount} max={subscription?.maxMembers ?? null} />
-              <UsageBar label="NFC cards" current={center.nfcCardsCount} max={subscription?.maxNfcCards ?? null} />
+              <UsageBar label="Members" current={centerSummary.membersCount} max={centerSummary.maxMembers} />
+              <UsageBar label="NFC cards" current={centerSummary.nfcCardsCount} max={centerSummary.maxNfcCards} />
               <div className="alert-item">
                 <strong>Current Plan</strong>
-                <p>{subscription?.planCode ?? 'sports_center_basic'} · {subscription?.status ?? 'active'} · {subscription?.provider ?? 'manual'} · renews {subscription?.currentPeriodEnd ?? '-'}</p>
+                <p>{centerSummary.planCode} · {centerSummary.subscriptionStatus} · {centerSummary.subscriptionProvider}</p>
               </div>
               {nearMemberLimit || nearCardLimit ? (
                 <div className="alert-item">
