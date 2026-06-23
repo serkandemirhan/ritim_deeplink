@@ -1,4 +1,5 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section, UsageBar } from '../_components/ConsoleShell';
+import { requireOrganizationAccess } from '../_auth/permissions';
 import {
   activityLogs,
   formatDate,
@@ -27,7 +28,8 @@ function cardTone(status: string): 'green' | 'orange' | 'red' {
   return 'orange';
 }
 
-export default function SportsCenterConsolePage() {
+export default async function SportsCenterConsolePage() {
+  const session = await requireOrganizationAccess(center.id);
   const centerRequests = joinRequests.filter((request) => request.sportsCenterId === center.id);
   const pendingRequests = centerRequests.filter((request) => request.status === 'pending');
   const centerCards = nfcCards.filter((card) => card.sportsCenterId === center.id);
@@ -62,6 +64,7 @@ export default function SportsCenterConsolePage() {
     <ConsoleShell
       active="sports-center"
       role="Sports center owner/admin/coach"
+      sessionRole={session.role}
       title={`${center.name} Console`}
       subtitle="Salon ekibinin kendi üyelerini, katılım taleplerini, NFC kartlarını, personelini ve günlük operasyonunu yönettiği panel."
     >

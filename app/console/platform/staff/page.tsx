@@ -1,4 +1,5 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section } from '../../_components/ConsoleShell';
+import { requireSuperAdmin } from '../../_auth/permissions';
 import { formatDate, joinSourceLabels } from '../../_data/mockConsoleData';
 import { getLivePlatformUsers, splitLiveUsers } from '../../_data/liveConsoleData';
 
@@ -13,6 +14,7 @@ function centerRoleTone(role?: string | null) {
 }
 
 export default async function PlatformStaffPage() {
+  const session = await requireSuperAdmin();
   const result = await getLivePlatformUsers();
   const { staff } = splitLiveUsers(result.users);
   const owners = staff.filter((user) => user.sportsCenterRole === 'owner');
@@ -24,6 +26,7 @@ export default async function PlatformStaffPage() {
     <ConsoleShell
       active="staff"
       role="Ritim platform_admin"
+      sessionRole={session.role}
       title="Staff / Managers"
       subtitle="Spor merkezi owner, admin ve coach rollerinin gerçek Supabase membership görünümü."
     >

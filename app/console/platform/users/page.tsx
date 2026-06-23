@@ -1,4 +1,5 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section } from '../../_components/ConsoleShell';
+import { requireSuperAdmin } from '../../_auth/permissions';
 import { formatDate, joinSourceLabels } from '../../_data/mockConsoleData';
 import { getLivePlatformUsers, splitLiveUsers } from '../../_data/liveConsoleData';
 
@@ -17,6 +18,7 @@ function centerRoleTone(role?: string | null) {
 }
 
 export default async function PlatformUsersPage() {
+  const session = await requireSuperAdmin();
   const result = await getLivePlatformUsers();
   const { admins, members, staff } = splitLiveUsers(result.users);
   const personalUsers = result.users.filter((user) => !user.sportsCenterRole && user.platformRole === 'user');
@@ -26,6 +28,7 @@ export default async function PlatformUsersPage() {
     <ConsoleShell
       active="users"
       role="Ritim platform_admin"
+      sessionRole={session.role}
       title="Users / Admins"
       subtitle="Supabase Auth, profiles ve tenant membership kayıtlarından gelen gerçek kullanıcı listesi."
     >

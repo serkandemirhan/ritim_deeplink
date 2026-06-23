@@ -1,4 +1,5 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section, UsageBar } from '../_components/ConsoleShell';
+import { requireSuperAdmin } from '../_auth/permissions';
 import {
   activityLogs,
   auditLogs,
@@ -26,6 +27,7 @@ function statusTone(status: string): 'green' | 'blue' | 'orange' | 'red' {
 }
 
 export default async function PlatformConsolePage() {
+  const session = await requireSuperAdmin();
   const platformUsersResult = await getPlatformUsers();
   const platformUsers = platformUsersResult.users;
   const activeCenters = sportsCenters.filter((center) => center.status === 'active').length;
@@ -112,6 +114,7 @@ export default async function PlatformConsolePage() {
     <ConsoleShell
       active="platform"
       role="Ritim platform_admin"
+      sessionRole={session.role}
       title="Platform Management Console"
       subtitle="Ritim ekibinin tüm spor merkezlerini, abonelikleri, NFC kapasitesini ve onboarding kuyruğunu yönettiği merkezi panel."
     >

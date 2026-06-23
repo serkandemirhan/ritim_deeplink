@@ -1,4 +1,5 @@
 import { ActionRow, Badge, ConsoleShell, DataTable, MetricCard, Section } from '../../_components/ConsoleShell';
+import { requireSuperAdmin } from '../../_auth/permissions';
 import { formatDate, joinSourceLabels } from '../../_data/mockConsoleData';
 import { getLivePlatformUsers, splitLiveUsers } from '../../_data/liveConsoleData';
 
@@ -6,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function PlatformMembersPage() {
+  const session = await requireSuperAdmin();
   const result = await getLivePlatformUsers();
   const { members } = splitLiveUsers(result.users);
   const activeMembers = members.filter((user) => user.status === 'active');
@@ -16,6 +18,7 @@ export default async function PlatformMembersPage() {
     <ConsoleShell
       active="members"
       role="Ritim platform_admin"
+      sessionRole={session.role}
       title="Members"
       subtitle="Spor merkezi üyesi olan kullanıcıların gerçek Supabase membership kayıtları."
     >
